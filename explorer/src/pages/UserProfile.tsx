@@ -86,7 +86,19 @@ export default function UserProfile() {
     [saveName, cancelEdit]
   );
 
-  if (!profile) return null;
+  if (!profile) {
+    return (
+      <div className="mx-auto max-w-4xl space-y-6">
+        <h1 className="text-2xl font-bold text-[#fafafa]">My Profile</h1>
+        <div className="rounded-xl border border-border bg-surface p-6">
+          <div className="flex items-center justify-center py-8">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <span className="ml-3 text-sm text-[#a1a1aa]">Loading profile...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const progress = getProgress(profile.xp);
   const initials = getInitials(profile.display_name);
