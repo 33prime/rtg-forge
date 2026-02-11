@@ -1,0 +1,84 @@
+name: Correction Analyzer
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'  # Monday 7am UTC
+  workflow_dispatch:
+
+jobs:
+  analyze-corrections:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install tomli
+
+      - name: Aggregate corrections
+        id: aggregate
+        run: |
+          python -c "
+          import json
+          import sys
+          sys.path.insert(0, 'intelligence/src')
+          from forge_intelligence.correction_aggregator import load_corrections, aggregate, to_json
+
+          from pathlib import Path
+          forge_root = Path('.')
+          corrections = load_corrections(forge_root)
+          stats = aggregate(corrections)
+
+          print('::group::Correction Statistics')
+          print(to_json(stats))
+          print('::endgroup::')
+
+          # Set outputs
+          with open('$GITHUB_OUTPUT' if '$GITHUB_OUTPUT' else '/dev/null', 'a') as f:
+              f.write(f'total_corrections={stats.total_corrections}\n')
+              f.write(f'total_observations={stats.total_observations}\n')
+
+          # Write report
+          with open('correction-report.json', 'w') as f:
+              f.write(to_json(stats))
+          "
+
+      - name: Identify skills needing updates
+        run: |
+          python -c "
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path('correction-report.json').read_text())
+          corrections = report.get('corrections', [])
+
+          print('## High-Priority Corrections')
+          print()
+
+          high_priority = [
+              c for c in corrections
+              if c.get('total_observations', 0) >= 3
+              and c.get('predictability') in ('high', 'medium')
+          ]
+
+          if high_priority:
+              for c in high_priority:
+                  print(f'- **{c[\"name\"]}** ({c[\"total_observations\"]}x, {c[\"predictability\"]} predictability)')
+                  print(f'  Skill: {c[\"skill\"]}')
+                  print(f'  Impact: {c[\"impact_level\"]}')
+                  print()
+          else:
+              print('No high-priority corrections found.')
+          "
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: correction-report
+          path: correction-report.json
+          retention-days: 30

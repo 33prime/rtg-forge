@@ -8,6 +8,7 @@ default_profile = "rtg-default"
 modules = "modules"
 skills = "skills"
 profiles = "profiles"
+decisions = "decisions"
 explorer = "explorer"
 
 [forge.mcp]

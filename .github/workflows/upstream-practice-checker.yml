@@ -1,0 +1,83 @@
+name: Upstream Practice Checker
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Monday 6am UTC
+  workflow_dispatch:
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install tomli
+
+      - name: Check upstream versions
+        run: |
+          python -c "
+          import json
+          import sys
+          sys.path.insert(0, 'intelligence/src')
+          from forge_intelligence.check_upstream import check_all_skills
+          from pathlib import Path
+
+          results = check_all_skills(Path('.'))
+          Path('upstream-results.json').write_text(json.dumps(results, indent=2))
+
+          print('## Upstream Version Check')
+          print()
+          for r in results:
+              versions = r.get('upstream_versions', {})
+              if versions:
+                  print(f'### {r[\"skill_name\"]}')
+                  print(f'  Last optimized: {r.get(\"last_optimized\", \"unknown\")}')
+                  for pkg, ver in versions.items():
+                      print(f'  - {pkg}: {ver}')
+                  print()
+          "
+
+      - name: Compare practices
+        run: |
+          python -c "
+          import json
+          import sys
+          sys.path.insert(0, 'intelligence/src')
+          from forge_intelligence.compare_practices import compare_skill_practices
+          from pathlib import Path
+
+          upstream = json.loads(Path('upstream-results.json').read_text())
+
+          comparisons = []
+          for u in upstream:
+              if u.get('upstream_versions'):
+                  result = compare_skill_practices(u, Path('.'))
+                  comparisons.append(result)
+
+          Path('practice-comparison.json').write_text(json.dumps(comparisons, indent=2))
+
+          print('## Practice Comparison')
+          print()
+          for c in comparisons:
+              recs = c.get('recommendations', [])
+              if recs:
+                  print(f'### {c[\"skill_name\"]}')
+                  for rec in recs:
+                      print(f'  - {rec}')
+                  print()
+          "
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: upstream-check
+          path: |
+            upstream-results.json
+            practice-comparison.json
+          retention-days: 30

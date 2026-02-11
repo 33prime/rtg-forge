@@ -82,14 +82,47 @@ Before adding anything to RTG Forge, it must pass these questions:
 - Prebuild pipeline (TOML/Markdown/source -> JSON indexes -> static frontend)
 
 ### What's Next
-- **Decisions directory** — The third knowledge type. TOML manifests capturing what was chosen, what was rejected, and why. Searchable by Claude Code during future builds.
+- **Correction capture workflow** — `/capture-correction` slash command and `record_correction` MCP tool for recording before/after deltas when Claude writes code without a skill, then rewrites with one. Each delta is a measured data point.
+- **Skill evolution pipeline** — GitHub Actions with a multi-agent council (conservative, progressive, synthesizer) that debates whether accumulated corrections warrant a skill update, then proposes changes as PRs.
+- **CLAUDE.md auto-generation** — `/generate-claude-md` slash command that detects a project's tech stack, queries correction data, and produces a project-specific CLAUDE.md ranked by empirical correction frequency — not hypothesized best practices.
 - **Extraction scoring** — An evaluation step at the end of builds that scores for module novelty, decision novelty, and skill gaps. Proposes forge contributions when thresholds are met.
 - **Auto-extraction pipeline** — Claude Code proposes module/decision/skill additions without being asked. The developer just approves or dismisses.
-- **Intelligence layer activation** — GitHub Actions for health checks, skill optimization, and contract validation once the forge has enough content to justify automation.
 - **Cross-module relationships** — Understanding which modules commonly appear together, which decisions informed which module designs, which skills are prerequisites for which modules.
 
 ### The Long Game
 The forge becomes a **knowledge moat**. Every project built with it deposits knowledge back. Over time, the accumulated understanding of what works, what doesn't, and why creates a compounding advantage that's impossible to replicate by starting fresh. The forge doesn't just store code — it stores *judgment*.
+
+The end state: every project gets an auto-generated CLAUDE.md file pre-loaded with guidance ranked by empirical correction frequency. "Patterns Claude Gets Wrong Here" isn't a guess — it's measured data from every previous project with this tech stack. The CLAUDE.md gets better as more corrections accumulate, creating a flywheel where each project's mistakes improve every future project's starting point.
+
+## The Learning Loop
+
+The correction capture system closes the loop between using skills and improving them:
+
+```
+Claude writes code (without skill)
+      │
+      ▼
+Skill corrects it (before/after delta)
+      │
+      ▼
+Correction recorded (decision.toml)
+      │
+      ▼
+Data aggregated (by skill, frequency, theme)
+      │
+      ▼
+Council debates (conservative vs. progressive vs. synthesizer)
+      │
+      ▼
+Skill updated (PR with evidence)
+      │
+      ▼
+Better skill → fewer corrections → (repeat)
+```
+
+Each correction record is a measured data point: what Claude got wrong, which skill fixed it, how often it happens, and across how many projects. Over time, skills absorb the most common corrections and the correction rate drops — proof that the system is learning.
+
+The same data feeds CLAUDE.md generation. When you run `/generate-claude-md` in a project, the resulting file contains a "Patterns Claude Gets Wrong Here" section ranked by actual observation frequency. A correction seen 10 times across 3 projects ranks higher than one seen once — empirical evidence, not opinion.
 
 ## Guiding Principles
 
@@ -100,6 +133,8 @@ The forge becomes a **knowledge moat**. Every project built with it deposits kno
 **The forge serves the build, not the other way around.** If using the forge ever feels like overhead — extra steps, extra formats, extra process — something is wrong. The forge should feel like having a senior engineer's accumulated knowledge available on demand.
 
 **TOML is the contract.** Every piece of knowledge has a machine-readable manifest. If it's not in TOML, it's not in the forge. Markdown carries the narrative; TOML carries the structure.
+
+**Empirical over theoretical.** Correction records are measured data about what AI gets wrong. A correction observed 10 times across 3 projects is a fact; a best practice from a blog post is an opinion. The forge prioritizes evidence from actual builds over hypothesized best practices.
 
 ---
 

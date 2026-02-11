@@ -43,3 +43,6 @@ htmlcov/
 
 # Build
 explorer/dist/
+
+# Local Netlify folder
+.netlify

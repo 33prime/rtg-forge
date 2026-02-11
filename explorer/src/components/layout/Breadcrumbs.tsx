@@ -8,6 +8,8 @@ const labelMap: Record<string, string> = {
   stack: 'Stack',
   practices: 'Practices',
   workflows: 'Workflows',
+  me: 'My Profile',
+  'how-to': 'How To',
 };
 
 function formatSegment(segment: string): string {

@@ -1,0 +1,46 @@
+[decision]
+name = "decision-name"
+version = "0.1.0"
+type = "correction"               # correction | architectural | pattern | tradeoff
+status = "active"                  # active | superseded | deprecated
+severity = "architectural"         # architectural | structural | style | correctness
+description = "One-line description of the decision"
+created = "2026-02-11"
+last_observed = "2026-02-11"
+
+[decision.context]
+applies_to = []                    # Technology tags: ["react", "typescript"]
+profiles = ["rtg-default"]
+trigger = "Description of when this decision is relevant"
+
+[decision.choice]
+chosen = "Description of the chosen approach"
+rejected = [
+  { option = "Alternative approach", reason = "Why it was rejected" },
+]
+
+[decision.evidence]
+skills = []                        # Skills that informed this decision
+modules = []                       # Modules where this applies
+related_decisions = []             # Other related decision names
+
+# --- Include this section only for type = "correction" ---
+
+[correction]
+skill_applied = "skill-name"
+instinct_pattern = "What Claude does by default without the skill"
+corrected_pattern = "What the skill teaches Claude to do instead"
+impact_level = "architectural"     # architectural | structural | style | correctness
+
+[correction.frequency]
+total_observations = 1
+first_observed = "2026-02-11"
+last_observed = "2026-02-11"
+observations = [
+  { date = "2026-02-11", project = "project-name", file = "example.tsx" },
+]
+
+[correction.classification]
+themes = []                        # e.g., ["separation-of-concerns", "type-safety"]
+origin = "model-instinct"          # model-instinct | convention-mismatch | outdated-pattern
+predictability = "high"            # high | medium | low

@@ -135,6 +135,36 @@ function buildSkillsIndex(): void {
   console.log(`  skills-docs.json: ${Object.keys(docs).length} docs`);
 }
 
+function buildDecisionsIndex(): void {
+  const decisionsDir = path.join(ROOT, 'decisions');
+  const decisions: Record<string, unknown>[] = [];
+  const docs: Record<string, string> = {};
+
+  for (const category of getDirs(decisionsDir)) {
+    const categoryDir = path.join(decisionsDir, category);
+    for (const name of getDirs(categoryDir)) {
+      const tomlPath = path.join(categoryDir, name, 'decision.toml');
+      const mdPath = path.join(categoryDir, name, 'DECISION.md');
+
+      const manifest = readToml(tomlPath);
+      if (manifest) {
+        decisions.push(manifest);
+      }
+
+      const md = readMarkdown(mdPath);
+      if (md) {
+        docs[`${category}/${name}`] = md;
+      }
+    }
+  }
+
+  fs.writeFileSync(path.join(OUT_DIR, 'decisions-index.json'), JSON.stringify(decisions, null, 2));
+  console.log(`  decisions-index.json: ${decisions.length} decisions`);
+
+  fs.writeFileSync(path.join(OUT_DIR, 'decisions-docs.json'), JSON.stringify(docs, null, 2));
+  console.log(`  decisions-docs.json: ${Object.keys(docs).length} docs`);
+}
+
 function buildProfilesIndex(): void {
   const profilesDir = path.join(ROOT, 'profiles');
   const profiles: Record<string, unknown>[] = [];
@@ -167,6 +197,7 @@ function main() {
   ensureOutDir();
   buildModulesIndex();
   buildSkillsIndex();
+  buildDecisionsIndex();
   buildProfilesIndex();
 
   console.log('');

@@ -1,0 +1,148 @@
+name: Skill Evolution Council
+
+on:
+  workflow_dispatch:
+    inputs:
+      skill_name:
+        description: 'Skill to evaluate for evolution'
+        required: true
+        type: string
+
+jobs:
+  gather-evidence:
+    runs-on: ubuntu-latest
+    outputs:
+      has_corrections: ${{ steps.gather.outputs.has_corrections }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install tomli
+
+      - name: Gather evidence
+        id: gather
+        run: |
+          python -c "
+          import json
+          import sys
+          sys.path.insert(0, 'intelligence/src')
+          from forge_intelligence.gather_evidence import gather_evidence
+          from pathlib import Path
+
+          evidence = gather_evidence('${{ inputs.skill_name }}', Path('.'))
+
+          if 'error' in evidence:
+              print(f'::error::{evidence[\"error\"]}')
+              sys.exit(1)
+
+          Path('evidence.json').write_text(json.dumps(evidence, indent=2))
+          count = evidence.get('correction_count', 0)
+          print(f'Found {count} corrections for ${{ inputs.skill_name }}')
+
+          with open('$GITHUB_OUTPUT' if '$GITHUB_OUTPUT' else '/dev/null', 'a') as f:
+              f.write(f'has_corrections={\"true\" if count > 0 else \"false\"}\n')
+          "
+
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence
+          path: evidence.json
+
+  council-debate:
+    needs: gather-evidence
+    if: needs.gather-evidence.outputs.has_corrections == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install tomli
+
+      - name: Download evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: evidence
+
+      - name: Run council debate
+        run: |
+          python -c "
+          import json
+          import sys
+          sys.path.insert(0, 'intelligence/src')
+          from forge_intelligence.council_agent import run_council
+          from pathlib import Path
+
+          evidence = json.loads(Path('evidence.json').read_text())
+          result = run_council(evidence)
+
+          Path('council-result.json').write_text(json.dumps(result, indent=2))
+
+          synthesis = result.get('synthesis', {})
+          print('## Council Synthesis')
+          print(synthesis.get('overall_recommendation', 'No recommendation'))
+          print()
+
+          for p in synthesis.get('proposals', []):
+              print(f'- [{p[\"action\"]}] {p[\"correction_name\"]} (confidence: {p[\"confidence\"]})')
+          "
+
+      - name: Upload council result
+        uses: actions/upload-artifact@v4
+        with:
+          name: council-result
+          path: council-result.json
+
+  propose-changes:
+    needs: council-debate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install tomli
+
+      - name: Download council result
+        uses: actions/download-artifact@v4
+        with:
+          name: council-result
+
+      - name: Generate proposal
+        run: |
+          python -c "
+          import json
+          import sys
+          sys.path.insert(0, 'intelligence/src')
+          from forge_intelligence.propose_skill_update import propose_from_council, proposal_to_dict
+          from pathlib import Path
+
+          council = json.loads(Path('council-result.json').read_text())
+          proposal = propose_from_council(council, Path('.'))
+          result = proposal_to_dict(proposal)
+
+          Path('proposal.json').write_text(json.dumps(result, indent=2))
+          print('## Skill Update Proposal')
+          print(f'Skill: {result[\"skill_name\"]}')
+          print(f'Summary: {result[\"summary\"]}')
+          "
+
+      - name: Upload proposal
+        uses: actions/upload-artifact@v4
+        with:
+          name: proposal
+          path: proposal.json

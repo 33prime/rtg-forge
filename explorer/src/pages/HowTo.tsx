@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../components/shared/Card';
 
@@ -102,6 +103,106 @@ const workflows = [
     icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
   },
 ];
+
+const mcpConfig = `{
+  "mcpServers": {
+    "rtg-forge": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory", "/path/to/rtg-forge",
+        "python", "-m", "mcp_server"
+      ],
+      "env": {
+        "FORGE_ROOT": "/path/to/rtg-forge"
+      }
+    }
+  }
+}`;
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }}
+      className="rounded bg-[#27272a] px-2 py-1 text-xs text-[#a1a1aa] transition-colors hover:bg-[#3f3f46] hover:text-[#fafafa]"
+    >
+      {copied ? 'Copied!' : 'Copy'}
+    </button>
+  );
+}
+
+function McpSetupSection() {
+  return (
+    <section>
+      <h2 className="mb-4 text-lg font-semibold text-[#fafafa]">MCP Server Setup</h2>
+      <div className="rounded-lg border border-border bg-surface p-6 space-y-5">
+        <p className="text-sm text-[#a1a1aa]">
+          The RTG Forge MCP server gives Claude Code direct access to forge tools. Here&apos;s how to set it up:
+        </p>
+
+        <div className="flex gap-4">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary-light">1</div>
+          <div>
+            <p className="text-sm font-medium text-[#fafafa]">Open your Claude config</p>
+            <p className="text-xs text-[#71717a] mt-0.5">
+              Edit <code className="text-primary-light">~/.claude.json</code> (global config for Claude Code).
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-4">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary-light">2</div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-[#fafafa]">Add the MCP server config</p>
+            <div className="mt-2 relative">
+              <div className="absolute right-2 top-2">
+                <CopyButton text={mcpConfig} />
+              </div>
+              <pre className="rounded-lg bg-[#09090b] border border-border-subtle p-4 text-xs text-[#a1a1aa] overflow-x-auto">
+                <code>{mcpConfig}</code>
+              </pre>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-4">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary-light">3</div>
+          <div>
+            <p className="text-sm font-medium text-[#fafafa]">Update the path</p>
+            <p className="text-xs text-[#71717a] mt-0.5">
+              Replace <code className="text-primary-light">/path/to/rtg-forge</code> with the actual path to your local <code className="text-primary-light">rtg-forge</code> repo clone.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-4">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary-light">4</div>
+          <div>
+            <p className="text-sm font-medium text-[#fafafa]">Restart Claude Code</p>
+            <p className="text-xs text-[#71717a] mt-0.5">
+              Close and reopen Claude Code. The forge tools (<code className="text-primary-light">/scout-modules</code>, <code className="text-primary-light">/use-module</code>, etc.) will be available in every session.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-4">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary-light">5</div>
+          <div>
+            <p className="text-sm font-medium text-[#fafafa]">Copy slash commands to target projects</p>
+            <p className="text-xs text-[#71717a] mt-0.5">
+              Run <code className="text-primary-light">/sync-skills</code> in any project to copy the forge slash commands into that project&apos;s local Claude config.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function HowTo() {
   const navigate = useNavigate();
@@ -312,6 +413,9 @@ export default function HowTo() {
           </Card>
         </div>
       </section>
+
+      {/* MCP Server Setup */}
+      <McpSetupSection />
 
       {/* Commands Reference */}
       <section>
