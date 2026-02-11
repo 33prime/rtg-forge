@@ -1,162 +1,39 @@
-"""RTG Forge MCP Server — AI interface to modules, skills, and profiles.
+"""RTG Forge MCP Server — AI interface to modules, skills, profiles, and decisions.
 
 Provides tools, resources, and prompts for browsing and managing
-the RTG Forge module/skill/profile ecosystem.
+the RTG Forge module/skill/profile/decision ecosystem.
+
+Supports two backends via FORGE_BACKEND env var:
+- "file" (default): reads from local TOML/MD files
+- "supabase": reads from Supabase forge_* tables
+
+Supports two transports via MCP_TRANSPORT env var:
+- "stdio" (default): local stdio (for dev)
+- "sse": HTTP/SSE (for Railway deployment)
 """
 
 from __future__ import annotations
 
 import json
 import os
-import sys
 from pathlib import Path
 
-import tomli
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("rtg-forge")
+from forge_mcp.backends import get_backend
+
+mcp = FastMCP(
+    "rtg-forge",
+    host=os.environ.get("MCP_HOST", "0.0.0.0") if os.environ.get("MCP_TRANSPORT") == "sse" else "127.0.0.1",
+    port=int(os.environ.get("PORT", "8000")),
+)
+
+_backend = get_backend()
+
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _get_forge_root() -> Path:
-    """Return the forge root directory.
-
-    Resolution order:
-    1. FORGE_ROOT environment variable
-    2. Walk up from CWD looking for forge.toml
-    """
-    env_root = os.environ.get("FORGE_ROOT")
-    if env_root:
-        return Path(env_root)
-
-    current = Path.cwd()
-    for parent in [current, *current.parents]:
-        if (parent / "forge.toml").exists():
-            return parent
-    # Fallback: assume CWD
-    return current
-
-
-def _load_toml(path: Path) -> dict:
-    """Load and parse a TOML file. Returns empty dict on failure."""
-    try:
-        return tomli.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
-def _read_md(path: Path) -> str:
-    """Read a Markdown file. Returns empty string on failure."""
-    try:
-        return path.read_text(encoding="utf-8")
-    except Exception:
-        return ""
-
-
-# ---------------------------------------------------------------------------
-# Scanners — return lists of parsed data
-# ---------------------------------------------------------------------------
-
-
-def _scan_modules(root: Path | None = None) -> list[dict]:
-    """Scan modules/*/module.toml and return parsed module metadata."""
-    root = root or _get_forge_root()
-    modules_dir = root / "modules"
-    if not modules_dir.is_dir():
-        return []
-
-    results: list[dict] = []
-    for mod_dir in sorted(modules_dir.iterdir()):
-        toml_path = mod_dir / "module.toml"
-        if mod_dir.is_dir() and toml_path.exists():
-            data = _load_toml(toml_path)
-            data["_path"] = str(mod_dir)
-            data["_name"] = mod_dir.name
-            results.append(data)
-    return results
-
-
-def _scan_skills(root: Path | None = None) -> list[dict]:
-    """Scan skills/<category>/*/meta.toml and return parsed skill metadata."""
-    root = root or _get_forge_root()
-    skills_dir = root / "skills"
-    if not skills_dir.is_dir():
-        return []
-
-    results: list[dict] = []
-    for category_dir in sorted(skills_dir.iterdir()):
-        if not category_dir.is_dir() or category_dir.name.startswith("_"):
-            continue
-        # Skip contract files
-        if category_dir.is_file():
-            continue
-        for skill_dir in sorted(category_dir.iterdir()):
-            toml_path = skill_dir / "meta.toml"
-            if skill_dir.is_dir() and toml_path.exists():
-                data = _load_toml(toml_path)
-                data["_path"] = str(skill_dir)
-                data["_name"] = skill_dir.name
-                data["_category_dir"] = category_dir.name
-                results.append(data)
-    return results
-
-
-def _scan_profiles(root: Path | None = None) -> list[dict]:
-    """Scan profiles/*/profile.toml and return parsed profile metadata."""
-    root = root or _get_forge_root()
-    profiles_dir = root / "profiles"
-    if not profiles_dir.is_dir():
-        return []
-
-    results: list[dict] = []
-    for prof_dir in sorted(profiles_dir.iterdir()):
-        toml_path = prof_dir / "profile.toml"
-        if prof_dir.is_dir() and toml_path.exists() and not prof_dir.name.startswith("_"):
-            data = _load_toml(toml_path)
-            data["_path"] = str(prof_dir)
-            data["_name"] = prof_dir.name
-            results.append(data)
-    return results
-
-
-def _find_module(name: str, root: Path | None = None) -> tuple[dict, Path] | None:
-    """Find a module by name. Returns (toml_data, module_dir) or None."""
-    root = root or _get_forge_root()
-    mod_dir = root / "modules" / name
-    toml_path = mod_dir / "module.toml"
-    if toml_path.exists():
-        return _load_toml(toml_path), mod_dir
-    return None
-
-
-def _find_skill(name: str, root: Path | None = None) -> tuple[dict, Path] | None:
-    """Find a skill by name across all category directories."""
-    root = root or _get_forge_root()
-    skills_dir = root / "skills"
-    if not skills_dir.is_dir():
-        return None
-
-    for category_dir in skills_dir.iterdir():
-        if not category_dir.is_dir() or category_dir.name.startswith("_"):
-            continue
-        skill_dir = category_dir / name
-        toml_path = skill_dir / "meta.toml"
-        if toml_path.exists():
-            return _load_toml(toml_path), skill_dir
-    return None
-
-
-def _find_profile(name: str, root: Path | None = None) -> tuple[dict, Path] | None:
-    """Find a profile by name. Returns (toml_data, profile_dir) or None."""
-    root = root or _get_forge_root()
-    prof_dir = root / "profiles" / name
-    toml_path = prof_dir / "profile.toml"
-    if toml_path.exists():
-        return _load_toml(toml_path), prof_dir
-    return None
 
 
 def _keyword_score(text: str, query_words: list[str]) -> int:
@@ -178,7 +55,7 @@ def list_modules(profile: str = "rtg-default", category: str = "") -> str:
         profile: Profile context (for future filtering).
         category: Filter by category (e.g. "enrichment"). Empty = all.
     """
-    modules = _scan_modules()
+    modules = _backend.scan_modules()
 
     if category:
         modules = [
@@ -209,11 +86,11 @@ def get_module(name: str, profile: str = "rtg-default") -> str:
         name: Module directory name (e.g. "stakeholder_enrichment").
         profile: Profile context.
     """
-    result = _find_module(name)
+    result = _backend.find_module(name)
     if result is None:
         return f"Module '{name}' not found."
 
-    data, mod_dir = result
+    data, _ = result
     mod = data.get("module", {})
 
     lines = [f"# Module: {mod.get('name', name)}\n"]
@@ -242,7 +119,7 @@ def get_module(name: str, profile: str = "rtg-default") -> str:
         lines.append(f"- **Setup time:** ~{ai.get('estimated_setup_minutes', '?')} min")
 
     # Append MODULE.md content
-    md_content = _read_md(mod_dir / "MODULE.md")
+    md_content = _backend.get_module_md(name)
     if md_content:
         lines.append("\n---\n")
         lines.append(md_content)
@@ -262,7 +139,7 @@ def search_modules(query: str, profile: str = "rtg-default") -> str:
     if not query_words:
         return "Please provide a search query."
 
-    modules = _scan_modules()
+    modules = _backend.scan_modules()
     scored: list[tuple[int, dict]] = []
 
     for m in modules:
@@ -304,11 +181,11 @@ def get_module_setup(name: str, profile: str = "rtg-default") -> str:
         name: Module directory name.
         profile: Profile context.
     """
-    result = _find_module(name)
+    result = _backend.find_module(name)
     if result is None:
         return f"Module '{name}' not found."
 
-    data, mod_dir = result
+    data, _ = result
     mod = data.get("module", {})
 
     lines = [f"# Setup: {mod.get('name', name)}\n"]
@@ -328,7 +205,7 @@ def get_module_setup(name: str, profile: str = "rtg-default") -> str:
         lines.append("")
 
     # Extract Setup section from MODULE.md
-    md_content = _read_md(mod_dir / "MODULE.md")
+    md_content = _backend.get_module_md(name)
     if md_content:
         # Try to extract just the Setup section
         in_setup = False
@@ -359,48 +236,18 @@ def validate_module(name: str) -> str:
     Args:
         name: Module directory name.
     """
-    root = _get_forge_root()
-    mod_dir = root / "modules" / name
-
-    if not mod_dir.is_dir():
+    checks = _backend.validate_module_files(name)
+    if checks is None:
         return f"Module directory '{name}' does not exist."
 
-    required_files = [
-        "module.toml",
-        "MODULE.md",
-        "__init__.py",
-        "router.py",
-        "service.py",
-        "models.py",
-        "config.py",
-    ]
-    required_dirs = [
-        "migrations/",
-        "tests/",
-    ]
-
-    results: list[dict] = []
-    all_pass = True
-
-    for fname in required_files:
-        exists = (mod_dir / fname).is_file()
-        results.append({"file": fname, "status": "pass" if exists else "FAIL"})
-        if not exists:
-            all_pass = False
-
-    for dname in required_dirs:
-        clean_name = dname.rstrip("/")
-        exists = (mod_dir / clean_name).is_dir()
-        results.append({"file": dname, "status": "pass" if exists else "FAIL"})
-        if not exists:
-            all_pass = False
+    all_pass = all(v == "pass" for v in checks.values())
 
     lines = [f"# Validation: {name}\n"]
     lines.append(f"**Overall:** {'PASS' if all_pass else 'FAIL'}\n")
 
-    for r in results:
-        icon = "pass" if r["status"] == "pass" else "FAIL"
-        lines.append(f"- [{icon}] `{r['file']}`")
+    for fname, status in checks.items():
+        icon = "pass" if status == "pass" else status
+        lines.append(f"- [{icon}] `{fname}`")
 
     return "\n".join(lines)
 
@@ -495,7 +342,7 @@ def list_skills(profile: str = "rtg-default", tier: str = "") -> str:
         profile: Profile context.
         tier: Filter by tier (e.g. "foundation", "applied"). Empty = all.
     """
-    skills = _scan_skills()
+    skills = _backend.scan_skills()
 
     if tier:
         skills = [
@@ -527,11 +374,11 @@ def get_skill(name: str, profile: str = "rtg-default") -> str:
         name: Skill directory name (e.g. "python-clean-architecture").
         profile: Profile context.
     """
-    result = _find_skill(name)
+    result = _backend.find_skill(name)
     if result is None:
         return f"Skill '{name}' not found."
 
-    data, skill_dir = result
+    data, _ = result
     sk = data.get("skill", {})
 
     lines = [f"# Skill: {sk.get('name', name)}\n"]
@@ -561,7 +408,7 @@ def get_skill(name: str, profile: str = "rtg-default") -> str:
             lines.append(f"- {mistake}")
 
     # Append SKILL.md content
-    md_content = _read_md(skill_dir / "SKILL.md")
+    md_content = _backend.get_skill_md(name)
     if md_content:
         lines.append("\n---\n")
         lines.append(md_content)
@@ -584,7 +431,7 @@ def recommend_skills(task: str, profile: str = "rtg-default") -> str:
     if not query_words:
         return "Please describe the task."
 
-    skills = _scan_skills()
+    skills = _backend.scan_skills()
     scored: list[tuple[float, dict]] = []
 
     for s in skills:
@@ -631,11 +478,11 @@ def get_profile(name: str) -> str:
     Args:
         name: Profile directory name (e.g. "rtg-default").
     """
-    result = _find_profile(name)
+    result = _backend.find_profile(name)
     if result is None:
         return f"Profile '{name}' not found."
 
-    data, prof_dir = result
+    data, _ = result
     prof = data.get("profile", {})
 
     lines = [f"# Profile: {prof.get('display_name', name)}\n"]
@@ -645,7 +492,7 @@ def get_profile(name: str) -> str:
     lines.append(f"- **Description:** {prof.get('description', 'N/A')}")
 
     # Constraints
-    constraints_data = _load_toml(prof_dir / "constraints.toml")
+    constraints_data = _backend.get_constraints(name)
     constraints = constraints_data.get("constraints", {})
     if constraints:
         lines.append("\n## Constraints\n")
@@ -673,7 +520,7 @@ def get_profile(name: str) -> str:
                     lines.append(f"- **{key}:** {', '.join(vals)}")
 
     # STACK.md
-    stack_content = _read_md(prof_dir / "STACK.md")
+    stack_content = _backend.get_stack_md(name)
     if stack_content:
         lines.append("\n---\n")
         lines.append(stack_content)
@@ -689,12 +536,11 @@ def validate_against_profile(technologies: str, profile: str = "rtg-default") ->
         technologies: Comma-separated list of technologies (e.g. "fastapi, react, mongodb").
         profile: Profile to validate against.
     """
-    result = _find_profile(profile)
+    result = _backend.find_profile(profile)
     if result is None:
         return f"Profile '{profile}' not found."
 
-    _, prof_dir = result
-    constraints_data = _load_toml(prof_dir / "constraints.toml")
+    constraints_data = _backend.get_constraints(profile)
     constraints = constraints_data.get("constraints", {})
 
     tech_list = [t.strip().lower() for t in technologies.split(",") if t.strip()]
@@ -773,7 +619,7 @@ def validate_against_profile(technologies: str, profile: str = "rtg-default") ->
 @mcp.tool()
 def list_profiles() -> str:
     """List all available profiles with name, display_name, maturity, and description."""
-    profiles = _scan_profiles()
+    profiles = _backend.scan_profiles()
 
     if not profiles:
         return "No profiles found."
@@ -797,12 +643,11 @@ def get_tech_stack(profile: str = "rtg-default") -> str:
     Args:
         profile: Profile name.
     """
-    result = _find_profile(profile)
+    result = _backend.find_profile(profile)
     if result is None:
         return f"Profile '{profile}' not found."
 
-    _, prof_dir = result
-    content = _read_md(prof_dir / "STACK.md")
+    content = _backend.get_stack_md(profile)
     return content if content else "No STACK.md found for this profile."
 
 
@@ -813,12 +658,11 @@ def get_gotchas(profile: str = "rtg-default") -> str:
     Args:
         profile: Profile name.
     """
-    result = _find_profile(profile)
+    result = _backend.find_profile(profile)
     if result is None:
         return f"Profile '{profile}' not found."
 
-    _, prof_dir = result
-    content = _read_md(prof_dir / "GOTCHAS.md")
+    content = _backend.get_gotchas_md(profile)
     return content if content else "No gotchas documented."
 
 
@@ -829,51 +673,26 @@ def trigger_health_check(module: str = "") -> str:
     Args:
         module: Module name. If empty, validates all modules.
     """
-    root = _get_forge_root()
-    modules_dir = root / "modules"
-
     if module:
         names = [module]
     else:
-        names = [
-            d.name for d in sorted(modules_dir.iterdir())
-            if d.is_dir() and (d / "module.toml").exists()
-        ] if modules_dir.is_dir() else []
+        modules = _backend.scan_modules()
+        names = [m["_name"] for m in modules]
 
     if not names:
         return json.dumps({"error": "No modules found to validate."}, indent=2)
 
-    required_files = [
-        "module.toml", "MODULE.md", "__init__.py",
-        "router.py", "service.py", "models.py", "config.py",
-    ]
-    required_dirs = ["migrations", "tests"]
-
     report: dict = {"modules": {}, "summary": {"total": 0, "passing": 0, "failing": 0}}
 
     for name in names:
-        mod_dir = modules_dir / name
-        if not mod_dir.is_dir():
+        checks = _backend.validate_module_files(name)
+        if checks is None:
             report["modules"][name] = {"status": "NOT_FOUND"}
             report["summary"]["total"] += 1
             report["summary"]["failing"] += 1
             continue
 
-        checks: dict[str, str] = {}
-        all_pass = True
-
-        for fname in required_files:
-            exists = (mod_dir / fname).is_file()
-            checks[fname] = "pass" if exists else "FAIL"
-            if not exists:
-                all_pass = False
-
-        for dname in required_dirs:
-            exists = (mod_dir / dname).is_dir()
-            checks[dname + "/"] = "pass" if exists else "FAIL"
-            if not exists:
-                all_pass = False
-
+        all_pass = all(v == "pass" for v in checks.values())
         report["modules"][name] = {
             "status": "PASS" if all_pass else "FAIL",
             "checks": checks,
@@ -888,6 +707,463 @@ def trigger_health_check(module: str = "") -> str:
 
 
 # ---------------------------------------------------------------------------
+# TOOLS — Decision tools
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+def list_decisions(
+    type: str = "",
+    severity: str = "",
+    profile: str = "rtg-default",
+) -> str:
+    """List all decisions with name, type, severity, status, and description.
+
+    Args:
+        type: Filter by type (correction, architectural, pattern, tradeoff). Empty = all.
+        severity: Filter by severity (architectural, structural, style, correctness). Empty = all.
+        profile: Profile context.
+    """
+    decisions = _backend.scan_decisions()
+
+    if type:
+        decisions = [
+            d for d in decisions
+            if d.get("decision", {}).get("type", "") == type
+        ]
+    if severity:
+        decisions = [
+            d for d in decisions
+            if d.get("decision", {}).get("severity", "") == severity
+        ]
+
+    if not decisions:
+        return "No decisions found."
+
+    lines = ["# Forge Decisions\n"]
+    for d in decisions:
+        dec = d.get("decision", {})
+        name = dec.get("name", d["_name"])
+        dec_type = dec.get("type", "unknown")
+        sev = dec.get("severity", "unknown")
+        status = dec.get("status", "unknown")
+        desc = dec.get("description", "No description")
+        category = d.get("_category_dir", "uncategorized")
+        lines.append(
+            f"- **{name}** (`{dec_type}`, {sev}, {status}) [{category}] — {desc}"
+        )
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def get_decision(name: str, profile: str = "rtg-default") -> str:
+    """Get full details for a decision: decision.toml metadata + DECISION.md content.
+
+    Args:
+        name: Decision directory name (e.g. "direct-api-in-components").
+        profile: Profile context.
+    """
+    result = _backend.find_decision(name)
+    if result is None:
+        return f"Decision '{name}' not found."
+
+    data, _ = result
+    dec = data.get("decision", {})
+
+    lines = [f"# Decision: {dec.get('name', name)}\n"]
+    lines.append(f"- **Type:** {dec.get('type', 'unknown')}")
+    lines.append(f"- **Status:** {dec.get('status', 'unknown')}")
+    lines.append(f"- **Severity:** {dec.get('severity', 'unknown')}")
+    lines.append(f"- **Description:** {dec.get('description', 'N/A')}")
+    lines.append(f"- **Created:** {dec.get('created', 'unknown')}")
+    lines.append(f"- **Last Observed:** {dec.get('last_observed', 'unknown')}")
+
+    # Context
+    ctx = dec.get("context", {})
+    if ctx:
+        lines.append("\n## Context")
+        if ctx.get("applies_to"):
+            lines.append(f"- **Applies to:** {', '.join(ctx['applies_to'])}")
+        if ctx.get("trigger"):
+            lines.append(f"- **Trigger:** {ctx['trigger']}")
+
+    # Choice
+    choice = dec.get("choice", {})
+    if choice:
+        lines.append("\n## Choice")
+        lines.append(f"- **Chosen:** {choice.get('chosen', 'N/A')}")
+        rejected = choice.get("rejected", [])
+        if rejected:
+            lines.append("- **Rejected:**")
+            for r in rejected:
+                lines.append(f"  - {r.get('option', '?')} — {r.get('reason', '?')}")
+
+    # Evidence
+    evidence = dec.get("evidence", {})
+    if evidence:
+        lines.append("\n## Evidence")
+        if evidence.get("skills"):
+            lines.append(f"- **Skills:** {', '.join(evidence['skills'])}")
+        if evidence.get("modules"):
+            lines.append(f"- **Modules:** {', '.join(evidence['modules'])}")
+        if evidence.get("related_decisions"):
+            lines.append(
+                f"- **Related Decisions:** {', '.join(evidence['related_decisions'])}"
+            )
+
+    # Correction data
+    correction = data.get("correction", {})
+    if correction:
+        lines.append("\n## Correction")
+        lines.append(f"- **Skill Applied:** {correction.get('skill_applied', 'N/A')}")
+        lines.append(
+            f"- **Instinct Pattern:** {correction.get('instinct_pattern', 'N/A')}"
+        )
+        lines.append(
+            f"- **Corrected Pattern:** {correction.get('corrected_pattern', 'N/A')}"
+        )
+        lines.append(
+            f"- **Impact Level:** {correction.get('impact_level', 'N/A')}"
+        )
+
+        freq = correction.get("frequency", {})
+        if freq:
+            lines.append(
+                f"- **Total Observations:** {freq.get('total_observations', 0)}"
+            )
+            lines.append(
+                f"- **First Observed:** {freq.get('first_observed', 'unknown')}"
+            )
+            lines.append(
+                f"- **Last Observed:** {freq.get('last_observed', 'unknown')}"
+            )
+
+        classification = correction.get("classification", {})
+        if classification:
+            if classification.get("themes"):
+                lines.append(
+                    f"- **Themes:** {', '.join(classification['themes'])}"
+                )
+            lines.append(
+                f"- **Origin:** {classification.get('origin', 'unknown')}"
+            )
+            lines.append(
+                f"- **Predictability:** {classification.get('predictability', 'unknown')}"
+            )
+
+    # Append DECISION.md content
+    md_content = _backend.get_decision_md(name)
+    if md_content:
+        lines.append("\n---\n")
+        lines.append(md_content)
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def search_decisions(query: str, profile: str = "rtg-default") -> str:
+    """Search decisions by matching query against descriptions, patterns, and themes.
+
+    Args:
+        query: Search query (keywords).
+        profile: Profile context.
+    """
+    query_words = [w.lower() for w in query.split() if w]
+    if not query_words:
+        return "Please provide a search query."
+
+    decisions = _backend.scan_decisions()
+    scored: list[tuple[int, dict]] = []
+
+    for d in decisions:
+        dec = d.get("decision", {})
+        correction = d.get("correction", {})
+        classification = correction.get("classification", {})
+
+        searchable = " ".join([
+            dec.get("name", ""),
+            dec.get("description", ""),
+            dec.get("context", {}).get("trigger", ""),
+            dec.get("choice", {}).get("chosen", ""),
+            correction.get("instinct_pattern", ""),
+            correction.get("corrected_pattern", ""),
+            " ".join(classification.get("themes", [])),
+            " ".join(dec.get("context", {}).get("applies_to", [])),
+        ])
+
+        score = _keyword_score(searchable, query_words)
+        if score > 0:
+            scored.append((score, d))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+
+    if not scored:
+        return f"No decisions matched query: '{query}'"
+
+    lines = [f"# Decision Search Results for '{query}'\n"]
+    for score, d in scored:
+        dec = d.get("decision", {})
+        name = dec.get("name", d["_name"])
+        desc = dec.get("description", "No description")
+        dec_type = dec.get("type", "unknown")
+        lines.append(f"- **{name}** ({dec_type}, relevance: {score}) — {desc}")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def record_correction(
+    skill_name: str,
+    instinct_pattern: str,
+    corrected_pattern: str,
+    impact_level: str = "structural",
+    project: str = "",
+    file: str = "",
+    context: str = "",
+    severity: str = "",
+    themes: str = "",
+    origin: str = "model-instinct",
+    predictability: str = "medium",
+) -> str:
+    """Record a correction — what Claude got wrong and what a skill fixed.
+
+    Creates a new correction record or increments frequency on an existing one.
+
+    Args:
+        skill_name: The skill that prompted the correction.
+        instinct_pattern: What Claude does by default without the skill.
+        corrected_pattern: What the skill teaches Claude to do instead.
+        impact_level: architectural | structural | style | correctness.
+        project: Project where this was observed.
+        file: File where this was observed.
+        context: Additional context about the observation.
+        severity: Override severity (defaults to impact_level).
+        themes: Comma-separated themes (e.g. "separation-of-concerns,type-safety").
+        origin: model-instinct | convention-mismatch | outdated-pattern.
+        predictability: high | medium | low.
+    """
+    return _backend.record_correction({
+        "skill_name": skill_name,
+        "instinct_pattern": instinct_pattern,
+        "corrected_pattern": corrected_pattern,
+        "impact_level": impact_level,
+        "project": project,
+        "file": file,
+        "context": context,
+        "severity": severity,
+        "themes": themes,
+        "origin": origin,
+        "predictability": predictability,
+    })
+
+
+@mcp.tool()
+def get_correction_stats(
+    skill_name: str = "",
+    min_frequency: int = 1,
+    profile: str = "rtg-default",
+) -> str:
+    """Get aggregate correction statistics ranked by frequency.
+
+    Args:
+        skill_name: Filter to corrections for a specific skill. Empty = all.
+        min_frequency: Minimum observation count to include.
+        profile: Profile context.
+    """
+    decisions = _backend.scan_decisions()
+
+    corrections: list[dict] = []
+    for d in decisions:
+        dec = d.get("decision", {})
+        if dec.get("type") != "correction":
+            continue
+
+        correction = d.get("correction", {})
+        freq = correction.get("frequency", {})
+        total = freq.get("total_observations", 0)
+
+        if total < min_frequency:
+            continue
+
+        if skill_name and correction.get("skill_applied") != skill_name:
+            continue
+
+        corrections.append({
+            "name": dec.get("name", d["_name"]),
+            "skill": correction.get("skill_applied", "unknown"),
+            "instinct": correction.get("instinct_pattern", ""),
+            "corrected": correction.get("corrected_pattern", ""),
+            "impact": correction.get("impact_level", "unknown"),
+            "total_observations": total,
+            "first_observed": freq.get("first_observed", ""),
+            "last_observed": freq.get("last_observed", ""),
+            "predictability": correction.get("classification", {}).get(
+                "predictability", "unknown"
+            ),
+            "themes": correction.get("classification", {}).get("themes", []),
+            "origin": correction.get("classification", {}).get("origin", "unknown"),
+        })
+
+    # Sort by frequency descending
+    corrections.sort(key=lambda c: c["total_observations"], reverse=True)
+
+    if not corrections:
+        msg = "No corrections found"
+        if skill_name:
+            msg += f" for skill '{skill_name}'"
+        if min_frequency > 1:
+            msg += f" with {min_frequency}+ observations"
+        return msg + "."
+
+    lines = ["# Correction Statistics\n"]
+
+    if skill_name:
+        lines.append(f"**Skill filter:** {skill_name}\n")
+
+    # Summary stats
+    total_corrections = len(corrections)
+    total_observations = sum(c["total_observations"] for c in corrections)
+    lines.append(f"- **Total corrections:** {total_corrections}")
+    lines.append(f"- **Total observations:** {total_observations}")
+
+    # By skill breakdown
+    by_skill: dict[str, int] = {}
+    for c in corrections:
+        by_skill[c["skill"]] = by_skill.get(c["skill"], 0) + c["total_observations"]
+
+    if len(by_skill) > 1:
+        lines.append("\n## By Skill\n")
+        for sk, count in sorted(by_skill.items(), key=lambda x: x[1], reverse=True):
+            lines.append(f"- **{sk}:** {count} observations")
+
+    # Individual corrections
+    lines.append("\n## Corrections (by frequency)\n")
+    for c in corrections:
+        lines.append(f"### {c['name']} ({c['total_observations']}x)")
+        lines.append(f"- **Skill:** {c['skill']}")
+        lines.append(f"- **Instinct:** {c['instinct']}")
+        lines.append(f"- **Corrected:** {c['corrected']}")
+        lines.append(f"- **Impact:** {c['impact']}")
+        lines.append(f"- **Predictability:** {c['predictability']}")
+        if c["themes"]:
+            lines.append(f"- **Themes:** {', '.join(c['themes'])}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def validate_decision(name: str) -> str:
+    """Validate a decision has all required contract files and fields.
+
+    Args:
+        name: Decision directory name.
+    """
+    result = _backend.find_decision(name)
+    if result is None:
+        return f"Decision '{name}' not found."
+
+    data, decision_dir = result
+    checks: list[dict] = []
+    all_pass = True
+
+    # File checks — in cloud mode we check for non-empty content
+    decision_dir_path = Path(decision_dir)
+    for fname in ["decision.toml", "DECISION.md"]:
+        if os.environ.get("FORGE_BACKEND", "file") == "supabase":
+            # In cloud mode, if we found the decision the data exists
+            exists = True
+        else:
+            exists = (decision_dir_path / fname).exists()
+        checks.append({"check": f"File: {fname}", "status": "pass" if exists else "FAIL"})
+        if not exists:
+            all_pass = False
+
+    # Required decision fields
+    dec = data.get("decision", {})
+    required_fields = ["name", "version", "type", "status", "severity", "description", "created"]
+    for field in required_fields:
+        has_field = field in dec
+        checks.append({
+            "check": f"Field: decision.{field}",
+            "status": "pass" if has_field else "FAIL",
+        })
+        if not has_field:
+            all_pass = False
+
+    # Valid enum values
+    valid_types = {"correction", "architectural", "pattern", "tradeoff"}
+    valid_statuses = {"active", "superseded", "deprecated"}
+    valid_severities = {"architectural", "structural", "style", "correctness"}
+
+    dec_type = dec.get("type", "")
+    type_ok = dec_type in valid_types
+    checks.append({
+        "check": f"Enum: type='{dec_type}'",
+        "status": "pass" if type_ok else "FAIL",
+    })
+    if not type_ok:
+        all_pass = False
+
+    status = dec.get("status", "")
+    status_ok = status in valid_statuses
+    checks.append({
+        "check": f"Enum: status='{status}'",
+        "status": "pass" if status_ok else "FAIL",
+    })
+    if not status_ok:
+        all_pass = False
+
+    sev = dec.get("severity", "")
+    sev_ok = sev in valid_severities
+    checks.append({
+        "check": f"Enum: severity='{sev}'",
+        "status": "pass" if sev_ok else "FAIL",
+    })
+    if not sev_ok:
+        all_pass = False
+
+    # Correction-specific checks
+    if dec_type == "correction":
+        correction = data.get("correction", {})
+        has_correction = bool(correction)
+        checks.append({
+            "check": "Section: [correction]",
+            "status": "pass" if has_correction else "FAIL",
+        })
+        if not has_correction:
+            all_pass = False
+        else:
+            for field in ["skill_applied", "instinct_pattern", "corrected_pattern", "impact_level"]:
+                has_field = field in correction
+                checks.append({
+                    "check": f"Field: correction.{field}",
+                    "status": "pass" if has_field else "FAIL",
+                })
+                if not has_field:
+                    all_pass = False
+
+            freq = correction.get("frequency", {})
+            has_freq = bool(freq)
+            checks.append({
+                "check": "Section: [correction.frequency]",
+                "status": "pass" if has_freq else "FAIL",
+            })
+            if not has_freq:
+                all_pass = False
+
+    lines = [f"# Validation: {name}\n"]
+    lines.append(f"**Overall:** {'PASS' if all_pass else 'FAIL'}\n")
+
+    for c in checks:
+        icon = "pass" if c["status"] == "pass" else "FAIL"
+        lines.append(f"- [{icon}] `{c['check']}`")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # RESOURCES — Read-only context
 # ---------------------------------------------------------------------------
 
@@ -895,7 +1171,7 @@ def trigger_health_check(module: str = "") -> str:
 @mcp.resource("forge://modules/catalog")
 def resource_modules_catalog() -> str:
     """JSON catalog of all forge modules."""
-    modules = _scan_modules()
+    modules = _backend.scan_modules()
     catalog = []
     for m in modules:
         mod = m.get("module", {})
@@ -913,7 +1189,7 @@ def resource_modules_catalog() -> str:
 @mcp.resource("forge://skills/catalog")
 def resource_skills_catalog() -> str:
     """JSON catalog of all forge skills."""
-    skills = _scan_skills()
+    skills = _backend.scan_skills()
     catalog = []
     for s in skills:
         sk = s.get("skill", {})
@@ -932,7 +1208,7 @@ def resource_skills_catalog() -> str:
 @mcp.resource("forge://profiles/catalog")
 def resource_profiles_catalog() -> str:
     """JSON catalog of all forge profiles."""
-    profiles = _scan_profiles()
+    profiles = _backend.scan_profiles()
     catalog = []
     for p in profiles:
         prof = p.get("profile", {})
@@ -950,17 +1226,63 @@ def resource_profiles_catalog() -> str:
 @mcp.resource("forge://docs/tech-stack")
 def resource_tech_stack() -> str:
     """Tech stack reference document (STACK.md from default profile)."""
-    root = _get_forge_root()
-    content = _read_md(root / "profiles" / "rtg-default" / "STACK.md")
+    content = _backend.get_stack_md("rtg-default")
     return content if content else "No tech stack documentation found."
 
 
 @mcp.resource("forge://docs/gotchas")
 def resource_gotchas() -> str:
     """Gotchas document from default profile."""
-    root = _get_forge_root()
-    content = _read_md(root / "profiles" / "rtg-default" / "GOTCHAS.md")
+    content = _backend.get_gotchas_md("rtg-default")
     return content if content else "No gotchas documented."
+
+
+@mcp.resource("forge://decisions/catalog")
+def resource_decisions_catalog() -> str:
+    """JSON catalog of all forge decisions."""
+    decisions = _backend.scan_decisions()
+    catalog = []
+    for d in decisions:
+        dec = d.get("decision", {})
+        catalog.append({
+            "name": dec.get("name", d["_name"]),
+            "description": dec.get("description", ""),
+            "type": dec.get("type", "unknown"),
+            "status": dec.get("status", "unknown"),
+            "severity": dec.get("severity", "unknown"),
+            "category": d.get("_category_dir", "uncategorized"),
+            "created": dec.get("created", ""),
+            "last_observed": dec.get("last_observed", ""),
+            "path": d["_path"],
+        })
+    return json.dumps(catalog, indent=2)
+
+
+@mcp.resource("forge://decisions/corrections-summary")
+def resource_corrections_summary() -> str:
+    """Corrections ranked by observation frequency."""
+    decisions = _backend.scan_decisions()
+    corrections = []
+    for d in decisions:
+        dec = d.get("decision", {})
+        if dec.get("type") != "correction":
+            continue
+        correction = d.get("correction", {})
+        freq = correction.get("frequency", {})
+        corrections.append({
+            "name": dec.get("name", d["_name"]),
+            "skill": correction.get("skill_applied", "unknown"),
+            "instinct_pattern": correction.get("instinct_pattern", ""),
+            "corrected_pattern": correction.get("corrected_pattern", ""),
+            "impact_level": correction.get("impact_level", "unknown"),
+            "total_observations": freq.get("total_observations", 0),
+            "predictability": correction.get("classification", {}).get(
+                "predictability", "unknown"
+            ),
+            "themes": correction.get("classification", {}).get("themes", []),
+        })
+    corrections.sort(key=lambda c: c["total_observations"], reverse=True)
+    return json.dumps(corrections, indent=2)
 
 
 # ---------------------------------------------------------------------------
@@ -1166,6 +1488,49 @@ Use `get_profile` to review the rendered output.
 """
 
 
+@mcp.prompt()
+def capture_correction() -> str:
+    """Step-by-step: record a before/after correction from a skill application."""
+    return """# Capture Correction
+
+You are helping the user record a correction — the delta between what Claude wrote
+without a skill and what the skill fixed. This data feeds the learning loop.
+
+## Step 1: Identify the Delta
+- What code did Claude write before reading the skill? (instinct pattern)
+- What did the code look like after applying the skill? (corrected pattern)
+- Which skill prompted the change?
+
+## Step 2: Classify the Correction
+- **Impact level:** architectural (system-level) | structural (file/component) | style (conventions) | correctness (bugs)
+- **Origin:** model-instinct (Claude default) | convention-mismatch (valid but wrong for stack) | outdated-pattern (once correct, now superseded)
+- **Predictability:** high (happens every time) | medium (often) | low (occasional)
+- **Themes:** e.g., separation-of-concerns, type-safety, caching, error-handling
+
+## Step 3: Check for Duplicates
+Use `search_decisions` to see if this correction already exists.
+
+## Step 4: Record
+If duplicate exists: use `record_correction` — it will increment the frequency counter.
+If new: use `record_correction` — it will create the full decision record.
+
+Required args:
+- `skill_name`: The skill that prompted the correction
+- `instinct_pattern`: What Claude does without the skill
+- `corrected_pattern`: What the skill teaches
+
+Optional but valuable:
+- `project`: Where this was observed
+- `file`: Which file
+- `themes`: Comma-separated theme tags
+- `context`: Additional context
+
+## Step 5: Verify
+Use `validate_decision` to ensure the record is contract-compliant.
+Use `get_decision` to review the full record.
+"""
+
+
 # ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
@@ -1173,7 +1538,11 @@ Use `get_profile` to review the rendered output.
 
 def main() -> None:
     """Run the MCP server."""
-    mcp.run()
+    transport = os.environ.get("MCP_TRANSPORT", "stdio")
+    if transport == "sse":
+        mcp.run(transport="sse")
+    else:
+        mcp.run()
 
 
 if __name__ == "__main__":
