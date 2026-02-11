@@ -1,0 +1,29 @@
+[skill]
+name = "fastapi-patterns"
+version = "0.1.0"
+tier = "specialized"
+category = "stack"
+relevance_tags = ["api", "python", "backend", "http", "rest", "fastapi"]
+priority_weight = 90
+description = "FastAPI patterns — async routes, Depends() for DI, Pydantic models, proper status codes, middleware."
+
+[relationships]
+prerequisites = ["python-clean-architecture"]
+complements = ["error-handling", "api-design"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Putting business logic in route handlers",
+    "Using sync functions for I/O-bound routes",
+    "Not using Depends() for dependency injection",
+    "Returning raw dicts instead of Pydantic models",
+    "Not setting correct HTTP status codes",
+    "Missing request validation with Pydantic",
+]

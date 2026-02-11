@@ -1,0 +1,29 @@
+[skill]
+name = "supabase-postgrest-patterns"
+version = "0.1.0"
+tier = "specialized"
+category = "stack"
+relevance_tags = ["supabase", "postgrest", "api", "query", "database"]
+priority_weight = 80
+description = "PostgREST query patterns — select with joins, filtering, pagination, RPC, avoiding N+1, resource embedding."
+
+[relationships]
+prerequisites = ["supabase-database-design"]
+complements = ["supabase-rls-patterns"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "N+1 queries when resource embedding would work",
+    "Not handling Supabase errors (checking .error)",
+    "Fetching all columns with select('*') when only a few are needed",
+    "Not using pagination for list endpoints",
+    "Missing TypeScript types for query results",
+    "Not using RPC for complex operations",
+]

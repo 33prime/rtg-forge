@@ -1,0 +1,29 @@
+[skill]
+name = "langgraph-patterns"
+version = "0.1.0"
+tier = "specialized"
+category = "stack"
+relevance_tags = ["ai", "langgraph", "langchain", "agents", "pipelines"]
+priority_weight = 85
+description = "LangGraph patterns — state graphs, nodes, edges, conditional routing, checkpointing, tool calling, error handling."
+
+[relationships]
+prerequisites = ["python-clean-architecture"]
+complements = ["langfuse-observability"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Not typing the graph state with TypedDict",
+    "Hardcoding prompts instead of parameterizing them",
+    "No error handling in graph nodes",
+    "Not using checkpointing for long-running graphs",
+    "Putting too much logic in a single node",
+    "Not testing individual nodes in isolation",
+]

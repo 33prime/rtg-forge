@@ -1,0 +1,29 @@
+[skill]
+name = "supabase-rls-patterns"
+version = "0.1.0"
+tier = "specialized"
+category = "stack"
+relevance_tags = ["security", "postgres", "supabase", "rls", "authorization"]
+priority_weight = 85
+description = "RLS policies — auth.uid(), service_role bypass, tenant isolation, policy naming, testing RLS."
+
+[relationships]
+prerequisites = ["supabase-database-design"]
+complements = ["supabase-postgrest-patterns"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Forgetting to enable RLS on new tables",
+    "Overly permissive policies (e.g., USING (true))",
+    "Not testing RLS with different user contexts",
+    "Using SECURITY DEFINER without understanding implications",
+    "Missing WITH CHECK on INSERT/UPDATE policies",
+    "Not isolating by tenant_id in multi-tenant apps",
+]

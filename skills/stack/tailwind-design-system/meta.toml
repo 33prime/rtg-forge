@@ -1,0 +1,29 @@
+[skill]
+name = "tailwind-design-system"
+version = "0.1.0"
+tier = "specialized"
+category = "stack"
+relevance_tags = ["css", "tailwind", "design", "ui", "styling"]
+priority_weight = 80
+description = "Tailwind patterns — design tokens, component variants with cn(), responsive design, dark mode, consistent spacing."
+
+[relationships]
+prerequisites = []
+complements = ["react-typescript-patterns"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Mixing inline styles with Tailwind classes",
+    "Inconsistent spacing values (not using design scale)",
+    "Not using cn() for conditional class merging",
+    "Hardcoding colors instead of using design tokens",
+    "Not implementing dark mode from the start",
+    "Duplicating class patterns instead of extracting components",
+]

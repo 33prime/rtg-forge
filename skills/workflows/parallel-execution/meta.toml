@@ -1,0 +1,27 @@
+[skill]
+name = "parallel-execution"
+version = "0.1.0"
+tier = "workflow"
+category = "workflows"
+relevance_tags = ["async", "parallel", "concurrency", "performance"]
+priority_weight = 70
+description = "Workflow for running independent tasks in parallel — asyncio.gather, task groups, error handling in concurrent execution."
+
+[relationships]
+prerequisites = []
+complements = ["python-clean-architecture"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Running independent async tasks sequentially instead of in parallel",
+    "Not handling partial failures in gather()",
+    "Unbounded concurrency overwhelming external services",
+    "Not using semaphores for rate-limited APIs",
+]

@@ -1,0 +1,29 @@
+[skill]
+name = "react-typescript-patterns"
+version = "0.1.0"
+tier = "specialized"
+category = "stack"
+relevance_tags = ["react", "typescript", "frontend", "components", "hooks"]
+priority_weight = 85
+description = "React+TypeScript patterns — component composition, custom hooks, proper typing, children patterns, error boundaries."
+
+[relationships]
+prerequisites = []
+complements = ["tailwind-design-system", "vite-react-architecture"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Using 'any' type for props or state",
+    "Not defining explicit Props interfaces",
+    "Inline object/function creation in JSX causing re-renders",
+    "Not using custom hooks to extract logic from components",
+    "Missing error boundaries around async components",
+    "Using useEffect for derived state instead of useMemo",
+]

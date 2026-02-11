@@ -1,0 +1,29 @@
+[skill]
+name = "supabase-database-design"
+version = "0.1.0"
+tier = "specialized"
+category = "stack"
+relevance_tags = ["database", "postgres", "supabase", "sql", "schema"]
+priority_weight = 85
+description = "Supabase/Postgres schema design — table naming, foreign keys, indexes, JSONB usage, views, migrations, timestamps."
+
+[relationships]
+prerequisites = []
+complements = ["supabase-rls-patterns", "supabase-postgrest-patterns"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Missing created_at/updated_at timestamps",
+    "No indexes on foreign key columns",
+    "Using TEXT where an ENUM or check constraint is appropriate",
+    "Storing structured data as TEXT instead of JSONB",
+    "Missing ON DELETE cascade/restrict on foreign keys",
+    "No index on columns used in WHERE/JOIN clauses",
+]

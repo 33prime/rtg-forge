@@ -1,0 +1,15 @@
+[forge]
+name = "rtg-forge"
+version = "0.1.0"
+description = "AI-native module registry, skills engine, and intelligence platform"
+default_profile = "rtg-default"
+
+[forge.paths]
+modules = "modules"
+skills = "skills"
+profiles = "profiles"
+explorer = "explorer"
+
+[forge.mcp]
+server_name = "rtg-forge"
+server_version = "0.1.0"

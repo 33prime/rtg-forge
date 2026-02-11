@@ -1,0 +1,15 @@
+[profile]
+name = "rtg-default"
+display_name = "RTG Default Stack"
+version = "0.1.0"
+description = "The standard ReadyToGo technology stack"
+maturity = "production"
+vendor = ""
+vendor_url = ""
+
+[base]
+extends = ""
+
+[maintainer]
+team = "rtg"
+last_reviewed = "2026-02-11"

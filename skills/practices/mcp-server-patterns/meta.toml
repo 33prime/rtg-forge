@@ -1,0 +1,28 @@
+[skill]
+name = "mcp-server-patterns"
+version = "0.1.0"
+tier = "specialized"
+category = "practices"
+relevance_tags = ["mcp", "tools", "resources", "ai", "claude"]
+priority_weight = 80
+description = "MCP server patterns — tool design, resource URIs, prompt patterns, transport configuration."
+
+[relationships]
+prerequisites = ["python-clean-architecture"]
+complements = ["langgraph-patterns"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Tools with unclear or overly broad descriptions",
+    "Not validating tool input parameters",
+    "Resource URIs that don't follow a consistent scheme",
+    "Not handling tool errors gracefully",
+    "Exposing too many tools (overwhelming the LLM)",
+]

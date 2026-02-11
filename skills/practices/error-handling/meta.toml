@@ -1,0 +1,28 @@
+[skill]
+name = "error-handling"
+version = "0.1.0"
+tier = "foundation"
+category = "practices"
+relevance_tags = ["errors", "exceptions", "python", "typescript", "resilience"]
+priority_weight = 90
+description = "Error handling patterns — error hierarchies, never swallowing errors, typed error responses, retry logic."
+
+[relationships]
+prerequisites = []
+complements = ["python-clean-architecture", "fastapi-patterns"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Bare except clauses that swallow all errors",
+    "Catching Exception instead of specific types",
+    "Logging an error but still swallowing it",
+    "No error hierarchy — using ValueError for everything",
+    "Not including context (IDs, state) in error messages",
+]

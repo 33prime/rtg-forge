@@ -1,0 +1,27 @@
+[skill]
+name = "vite-react-architecture"
+version = "0.1.0"
+tier = "specialized"
+category = "stack"
+relevance_tags = ["vite", "react", "spa", "frontend", "routing"]
+priority_weight = 85
+description = "Patterns for building Vite+React SPAs: project structure, routing, data fetching, state management, build optimization."
+
+[relationships]
+prerequisites = ["react-typescript-patterns"]
+complements = ["tailwind-design-system"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Not code-splitting routes for bundle optimization",
+    "Mixing data fetching patterns (useEffect vs router loaders)",
+    "No error boundaries at route level",
+    "Not configuring path aliases in vite.config.ts and tsconfig.json",
+]

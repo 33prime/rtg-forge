@@ -1,0 +1,15 @@
+[profile]
+name = ""
+display_name = ""
+version = "0.1.0"
+description = ""
+maturity = "seed"
+vendor = ""
+vendor_url = ""
+
+[base]
+extends = "rtg-default"
+
+[maintainer]
+team = ""
+last_reviewed = ""

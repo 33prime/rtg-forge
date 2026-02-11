@@ -1,0 +1,33 @@
+[module]
+name = "stakeholder_enrichment"
+version = "0.1.0"
+description = "Multi-source stakeholder profile enrichment with AI synthesis"
+status = "stable"
+category = "enrichment"
+author = "RTG"
+
+[module.dependencies]
+python = ["httpx", "langchain-anthropic", "langgraph"]
+services = ["supabase", "anthropic"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/enrichment"
+auth_required = true
+
+[module.database]
+tables = ["enrichment_profiles", "enrichment_sources"]
+requires_rls = true
+
+[ai]
+use_when = "Need to enrich stakeholder profiles from LinkedIn, company websites, or other public sources"
+input_summary = "LinkedIn URL and/or company website URL -> triggers multi-source enrichment pipeline"
+output_summary = "Structured profile with AI synthesis, confidence scores, ICP signals, and suggested project ideas"
+complexity = "high"
+estimated_setup_minutes = 30
+related_modules = ["icp_signal_extraction"]
+
+[health]
+last_validated = "2026-02-11"
+test_coverage = 0
+known_issues = []

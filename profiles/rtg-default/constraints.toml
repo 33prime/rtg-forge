@@ -1,0 +1,26 @@
+[constraints]
+description = "Standard RTG stack: Supabase + FastAPI + Vite React + LangGraph"
+
+[constraints.required]
+database = { name = "Supabase (Postgres)", reason = "Core data layer" }
+api = { name = "FastAPI", reason = "Python API framework" }
+frontend = { name = "Vite + React", reason = "SPA framework" }
+css = { name = "Tailwind CSS", reason = "Utility-first CSS" }
+ai_orchestration = { name = "LangGraph", reason = "AI pipeline orchestration" }
+llm = { name = "Anthropic Claude", reason = "Primary LLM" }
+observability = { name = "Langfuse", reason = "LLM observability" }
+
+[constraints.allowed]
+hosting_api = ["railway"]
+hosting_frontend = ["netlify", "vercel"]
+queue = ["upstash-qstash"]
+search = ["supabase-pgvector"]
+
+[constraints.forbidden]
+orm = ["sqlalchemy", "prisma", "drizzle"]
+api_framework = ["django", "flask", "express"]
+frontend_framework = ["next.js", "nuxt", "angular", "svelte"]
+css_framework = ["styled-components", "emotion", "css-modules"]
+database = ["mongodb", "dynamodb", "firebase"]
+
+[constraints.overrides]

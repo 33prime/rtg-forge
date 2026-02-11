@@ -1,0 +1,5 @@
+{
+  "name": "rtg-forge",
+  "private": true,
+  "workspaces": ["explorer"]
+}

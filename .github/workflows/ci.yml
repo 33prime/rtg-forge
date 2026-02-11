@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  python-lint:
+    name: Python Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+
+  python-test:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync
+      - run: uv run pytest
+
+  explorer-lint:
+    name: Explorer Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install
+      - run: cd explorer && pnpm run lint
+      - run: cd explorer && npx tsc --noEmit
+
+  explorer-test:
+    name: Explorer Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install
+      - run: cd explorer && pnpm test -- --run
+
+  validate-manifests:
+    name: Validate Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync
+      - name: Validate module.toml files
+        run: |
+          uv run python -c "
+          from pathlib import Path
+          import tomli
+          errors = []
+          for f in Path('modules').glob('*/module.toml'):
+              try:
+                  with open(f, 'rb') as fh:
+                      data = tomli.load(fh)
+                  assert 'module' in data, f'{f}: missing [module] section'
+                  assert 'name' in data['module'], f'{f}: missing module.name'
+              except Exception as e:
+                  errors.append(str(e))
+          if errors:
+              print('\n'.join(errors))
+              exit(1)
+          print('All module.toml files valid')
+          "
+      - name: Validate meta.toml files
+        run: |
+          uv run python -c "
+          from pathlib import Path
+          import tomli
+          errors = []
+          for f in Path('skills').glob('*/*/meta.toml'):
+              try:
+                  with open(f, 'rb') as fh:
+                      data = tomli.load(fh)
+                  assert 'skill' in data, f'{f}: missing [skill] section'
+                  assert 'name' in data['skill'], f'{f}: missing skill.name'
+              except Exception as e:
+                  errors.append(str(e))
+          if errors:
+              print('\n'.join(errors))
+              exit(1)
+          print('All meta.toml files valid')
+          "
+      - name: Validate profile.toml files
+        run: |
+          uv run python -c "
+          from pathlib import Path
+          import tomli
+          errors = []
+          for f in Path('profiles').glob('*/profile.toml'):
+              if '_template' in str(f):
+                  continue
+              try:
+                  with open(f, 'rb') as fh:
+                      data = tomli.load(fh)
+                  assert 'profile' in data, f'{f}: missing [profile] section'
+              except Exception as e:
+                  errors.append(str(e))
+          if errors:
+              print('\n'.join(errors))
+              exit(1)
+          print('All profile.toml files valid')
+          "

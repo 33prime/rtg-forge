@@ -1,0 +1,29 @@
+[skill]
+name = "python-clean-architecture"
+version = "0.1.0"
+tier = "foundation"
+category = "stack"
+relevance_tags = ["python", "backend", "architecture", "clean-code", "typing"]
+priority_weight = 95
+description = "Python clean code patterns — type hints, dataclasses, service layers, error hierarchies, explicit returns."
+
+[relationships]
+prerequisites = []
+complements = ["error-handling", "testing-strategy"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Using bare except clauses",
+    "Missing type hints on public functions",
+    "God functions over 50 lines",
+    "Returning None implicitly instead of raising",
+    "Using dict instead of dataclass/Pydantic model",
+    "Mutable default arguments",
+]

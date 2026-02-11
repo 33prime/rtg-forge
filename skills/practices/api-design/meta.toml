@@ -1,0 +1,28 @@
+[skill]
+name = "api-design"
+version = "0.1.0"
+tier = "foundation"
+category = "practices"
+relevance_tags = ["api", "rest", "design", "contracts", "versioning"]
+priority_weight = 85
+description = "API design patterns — REST conventions, versioning, pagination, error responses, OpenAPI documentation."
+
+[relationships]
+prerequisites = []
+complements = ["fastapi-patterns", "error-handling"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Inconsistent error response shapes across endpoints",
+    "No pagination on list endpoints",
+    "Using POST for idempotent operations",
+    "Not versioning the API from the start",
+    "Leaking internal IDs or implementation details in responses",
+]

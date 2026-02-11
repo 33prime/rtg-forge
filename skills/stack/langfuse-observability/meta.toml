@@ -1,0 +1,27 @@
+[skill]
+name = "langfuse-observability"
+version = "0.1.0"
+tier = "specialized"
+category = "stack"
+relevance_tags = ["observability", "langfuse", "tracing", "llm", "monitoring"]
+priority_weight = 75
+description = "Langfuse tracing patterns — trace decoration, span nesting, cost tracking, prompt management, evaluation."
+
+[relationships]
+prerequisites = []
+complements = ["langgraph-patterns"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Not flushing traces before process exit",
+    "Missing trace context propagation in async workflows",
+    "Not tracking token costs per trace",
+    "Forgetting to add metadata for filtering in the dashboard",
+]

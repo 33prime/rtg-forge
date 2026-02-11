@@ -1,0 +1,28 @@
+[skill]
+name = "testing-strategy"
+version = "0.1.0"
+tier = "foundation"
+category = "practices"
+relevance_tags = ["testing", "pytest", "vitest", "tdd", "coverage"]
+priority_weight = 85
+description = "Testing patterns — test pyramids, contract tests, fixture patterns, mocking strategies, CI integration."
+
+[relationships]
+prerequisites = []
+complements = ["python-clean-architecture", "react-typescript-patterns"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Testing implementation details instead of behavior",
+    "Excessive mocking making tests brittle",
+    "No test for error/edge cases",
+    "Tests that depend on execution order",
+    "Missing integration tests for database/API boundaries",
+]

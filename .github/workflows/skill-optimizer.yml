@@ -1,0 +1,72 @@
+name: Skill Optimizer
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 6am UTC
+  workflow_dispatch:
+
+jobs:
+  optimize:
+    name: Check for Upstream Updates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync
+
+      - name: Check upstream versions
+        id: check
+        run: |
+          uv run python -c "
+          import json
+          from pathlib import Path
+          import tomli
+          import urllib.request
+
+          TAG_TO_PYPI = {
+              'fastapi': 'fastapi',
+              'pydantic': 'pydantic',
+              'supabase': 'supabase',
+              'langgraph': 'langgraph',
+              'langchain': 'langchain-core',
+              'langfuse': 'langfuse',
+          }
+
+          def get_pypi_version(package: str) -> str | None:
+              try:
+                  url = f'https://pypi.org/pypi/{package}/json'
+                  req = urllib.request.Request(url, headers={'User-Agent': 'rtg-forge/0.1'})
+                  with urllib.request.urlopen(req, timeout=10) as resp:
+                      data = json.loads(resp.read())
+                      return data['info']['version']
+              except Exception:
+                  return None
+
+          updates = {}
+          skills_dir = Path('skills')
+          for meta_path in skills_dir.glob('*/*/meta.toml'):
+              with open(meta_path, 'rb') as f:
+                  meta = tomli.load(f)
+              skill_name = meta.get('skill', {}).get('name', '')
+              tags = meta.get('skill', {}).get('relevance_tags', [])
+
+              for tag in tags:
+                  if tag in TAG_TO_PYPI:
+                      pypi_pkg = TAG_TO_PYPI[tag]
+                      version = get_pypi_version(pypi_pkg)
+                      if version:
+                          updates.setdefault(skill_name, []).append({
+                              'package': pypi_pkg,
+                              'latest_version': version,
+                          })
+
+          print(json.dumps(updates, indent=2))
+          print(f'\nChecked {len(updates)} skills for upstream updates')
+          "
+
+      - name: Create PR if updates found
+        if: success()
+        run: |
+          echo "Upstream version check complete. Review output above for any updates that may require skill modifications."
+          echo "To create a PR with skill updates, run the intelligence layer locally:"
+          echo "  uv run forge optimize <skill-name>"

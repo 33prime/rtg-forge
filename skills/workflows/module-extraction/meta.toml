@@ -1,0 +1,27 @@
+[skill]
+name = "module-extraction"
+version = "0.1.0"
+tier = "workflow"
+category = "workflows"
+relevance_tags = ["module", "extraction", "refactoring", "architecture"]
+priority_weight = 75
+description = "Workflow for extracting reusable modules from existing codebases — identification, boundaries, interface design."
+
+[relationships]
+prerequisites = ["python-clean-architecture"]
+complements = ["testing-strategy"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+    "Extracting too early before patterns stabilize",
+    "Not defining clear module boundaries and interfaces",
+    "Circular dependencies between extracted module and parent",
+    "Missing tests before extraction (no safety net)",
+]
