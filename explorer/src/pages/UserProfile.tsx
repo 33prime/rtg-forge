@@ -71,19 +71,23 @@ export default function UserProfile() {
     if (!user) return;
 
     let cancelled = false;
-    supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-      .then(({ data, error: err }) => {
-        if (cancelled) return;
-        if (err) {
-          setError(`Could not load profile: ${err.message}`);
-        } else {
-          setProfile(data as Profile);
-        }
-      });
+    Promise.resolve(
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+    ).then(({ data, error: err }) => {
+      if (cancelled) return;
+      if (err) {
+        if (err.message?.includes('abort')) return;
+        setError(`Could not load profile: ${err.message}`);
+      } else {
+        setProfile(data as Profile);
+      }
+    }).catch(() => {
+      // Ignore network/abort errors
+    });
 
     return () => { cancelled = true; };
   }, [user, authProfile]);
