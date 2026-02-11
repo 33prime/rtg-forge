@@ -44,21 +44,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    // Use onAuthStateChange as the single source of truth.
-    // It fires INITIAL_SESSION immediately with the current session,
-    // so there's no need to also call getSession() (which races and
-    // causes AbortError when both are in flight).
+    // Fast path: if no stored session in localStorage, show login
+    // immediately instead of waiting for Supabase's async initialization.
+    const projectRef = new URL(import.meta.env.VITE_SUPABASE_URL).hostname.split('.')[0];
+    if (!localStorage.getItem(`sb-${projectRef}-auth-token`)) {
+      setLoading(false);
+    }
+
+    // onAuthStateChange fires INITIAL_SESSION after internal init.
+    // No need to also call getSession() (which races and causes AbortError).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, s) => {
+      (_event, s) => {
         setSession(s);
         setUser(s?.user ?? null);
+        setLoading(false);
         if (s?.user) {
-          const p = await fetchProfile(s.user.id);
-          setProfile(p);
+          fetchProfile(s.user.id).then((p) => setProfile(p));
         } else {
           setProfile(null);
         }
-        setLoading(false);
       }
     );
 
