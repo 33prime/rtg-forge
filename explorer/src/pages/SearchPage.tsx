@@ -131,7 +131,7 @@ export default function SearchPage() {
                       onClick={() => navigate(r.url)}
                       className="flex w-full items-start gap-3 rounded-lg border border-border bg-surface p-4 text-left transition-colors hover:border-[#3f3f46] hover:bg-surface-hover"
                     >
-                      <Badge variant={typeBadgeVariant[r.type]}>{r.type}</Badge>
+                      <Badge variant={typeBadgeVariant[r.type] ?? 'default'}>{r.type}</Badge>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-semibold text-[#fafafa]">{r.name}</h3>
                         <p className="mt-0.5 line-clamp-1 text-xs text-[#a1a1aa]">

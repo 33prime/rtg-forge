@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "rtg-forge": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "/Users/matt/rtg-forge/mcp-server",
+        "python",
+        "-m",
+        "forge_mcp.server"
+      ],
+      "env": {
+        "FORGE_ROOT": "/Users/matt/rtg-forge"
+      }
+    }
+  }
+}
