@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
-import RtgMark from '../branding/RtgMark';
 
 interface NavItem {
   label: string;
@@ -20,11 +19,10 @@ const navItems: NavItem[] = [
 export default function Sidebar() {
   return (
     <aside className="flex h-full w-64 flex-col border-r border-border bg-surface">
-      <div className="flex items-center gap-2 px-6 py-5">
-        <RtgMark size={32} />
-        <span className="text-lg font-bold tracking-tight">
-          <span className="text-primary-light">RTG</span>{' '}
-          <span className="text-[#fafafa]">Forge</span>
+      <div className="flex items-center gap-3 px-6 py-5">
+        <img src="/favicon.svg" alt="RTG" className="h-8 w-8" />
+        <span className="text-lg font-bold tracking-tight text-primary-light">
+          Forge
         </span>
       </div>
 

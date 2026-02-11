@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { clsx } from 'clsx';
 import { useAuth } from '../contexts/AuthContext';
 import { useAllProfiles, useUpdateDisplayName } from '../hooks/useProfiles';
+import { supabase } from '../lib/supabase';
+import type { Profile } from '../lib/database.types';
 
 const LEVEL_THRESHOLDS = [
   { level: 'Observer', min: 0 },
@@ -54,9 +56,37 @@ function RoleBadge({ role }: RoleBadgeProps) {
 }
 
 export default function UserProfile() {
-  const { profile, refreshProfile } = useAuth();
+  const { user, profile: authProfile, refreshProfile } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(authProfile);
+  const [error, setError] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(profile?.display_name ?? '');
+
+  // Fetch profile directly if AuthContext didn't provide one
+  useEffect(() => {
+    if (authProfile) {
+      setProfile(authProfile);
+      return;
+    }
+    if (!user) return;
+
+    let cancelled = false;
+    supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+      .then(({ data, error: err }) => {
+        if (cancelled) return;
+        if (err) {
+          setError(`Could not load profile: ${err.message}`);
+        } else {
+          setProfile(data as Profile);
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [user, authProfile]);
 
   const isAdmin = profile?.role === 'admin';
   const { data: users, isLoading: loadingUsers } = useAllProfiles(isAdmin);
@@ -85,6 +115,17 @@ export default function UserProfile() {
     },
     [saveName, cancelEdit]
   );
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-4xl space-y-6">
+        <h1 className="text-2xl font-bold text-[#fafafa]">My Profile</h1>
+        <div className="rounded-xl border border-border bg-surface p-6">
+          <p className="text-sm text-red-400">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!profile) {
     return (
