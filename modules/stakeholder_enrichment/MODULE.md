@@ -2,70 +2,88 @@
 
 ## What It Does
 
-Multi-source stakeholder profile enrichment with AI synthesis. This module pulls data from LinkedIn profiles, company websites, and other public sources, then uses an AI pipeline (LangGraph + Anthropic) to produce structured stakeholder profiles with confidence scores, ICP signals, and suggested project ideas. It is designed for async enrichment workflows where depth of insight matters more than speed.
+Multi-source enrichment pipeline that takes a beta applicant's LinkedIn URL and company website, pulls data from three external APIs in parallel (PeopleDataLabs, Bright Data LinkedIn scraper, Firecrawl website extractor), then uses Claude to synthesize a deep consultant assessment, psychographic profile, sales intelligence, ICP fit score, and personalized demo project ideas. Results are persisted to Supabase. Both endpoints are fire-and-forget background tasks.
 
 ## When To Use It
 
-- **Building account intelligence** -- Enrich stakeholder profiles before outreach or account planning.
-- **Enriching CRM data** -- Fill in gaps in your CRM with structured, AI-synthesized profile data.
-- **Pre-meeting research** -- Generate a comprehensive profile before a stakeholder meeting.
-- **ICP scoring** -- Extract signals that indicate how well a stakeholder matches your Ideal Customer Profile.
-- **Suggested project identification** -- Discover potential project ideas based on stakeholder context.
+- **Enriching beta applicants** -- After a consultant submits a beta application form, trigger enrichment to build a full intelligence profile before outreach.
+- **ICP scoring** -- Automatically score applicants against the active ICP definition (0-100 with fit_category).
+- **Demo project generation** -- Auto-generate 3 personalized project ideas for qualified leads (score >= 50) to use in sales demos.
+- **Pre-meeting research** -- Generate psychographic profiles and sales intelligence before discovery calls.
 
 ## When NOT To Use It
 
-- **Simple contact lookup** -- If you just need a name or email, use a dedicated contacts API instead.
-- **Real-time lookups** -- This module runs an async enrichment pipeline. It is not suitable for synchronous, sub-second lookups.
-- **Bulk data import** -- For importing thousands of contacts, use a batch ETL pipeline. This module is designed for individual or small-batch enrichment.
-- **Guaranteed data freshness** -- Scraped data may be cached. If you need real-time accuracy, verify against the source directly.
+- **Simple contact lookup** -- If you just need a name or email, use PDL directly.
+- **Real-time lookups** -- The pipeline takes 30-120 seconds (parallel API polling + Claude synthesis). Not for sub-second responses.
+- **Bulk imports** -- Designed for individual enrichment, not batch ETL of thousands.
+- **Without API keys** -- Requires ANTHROPIC_API_KEY, PDL_API_KEY, BRIGHTDATA_API_KEY, and FIRECRAWL_API_KEY.
 
 ## Architecture
 
-The enrichment pipeline is implemented as a LangGraph graph with the following nodes:
+Two execution modes (feature-flagged via `use_langgraph_enrichment`):
+
+### Legacy Pipeline (default)
+
+Sequential async pipeline in `service.py`:
 
 ```
-fetch_sources -> extract_data -> synthesize_profile -> score_confidence -> generate_signals
+POST /enrich (beta_application_id)
+    | BackgroundTask
+fetch beta_applications row
+    |
+create/reset enrichment_profiles (status: enriching)
+    |
++-- enrich_pdl --------+
+|-- enrich_brightdata --|  asyncio.gather (parallel)
++-- enrich_firecrawl ---+
+    |
+store raw data to enrichment_profiles
+    |
+synthesize_consultant (Claude) -> consultant_assessment
+    |
+generate_psychographic_sales_intel (Claude, non-fatal)
+    |
+score_icp_fit (Claude) -> icp_fit_assessments insert
+    |
+finalize status (scored | failed | enriching)
+    |
+[if scored && score >= 50] -> run_ideas_pipeline
+    |
+generate_project_ideas (Claude) -> demo_project_ideas[3]
+    |
+status -> ideas_ready
 ```
 
-### Pipeline Nodes
+### LangGraph Pipeline (feature-flagged)
 
-1. **fetch_sources** -- Given a LinkedIn URL and/or company website URL, fetches the raw HTML/data from each source. Uses `httpx` with rate limiting and retry logic.
-
-2. **extract_data** -- Parses the raw data from each source into structured fields (name, title, company, bio, recent activity, etc.). Uses a combination of HTML parsing and LLM extraction.
-
-3. **synthesize_profile** -- Takes the extracted data from all sources and synthesizes a unified profile narrative. Resolves conflicts between sources and produces a coherent summary. Powered by Anthropic Claude.
-
-4. **score_confidence** -- Assigns a confidence score (0.0 to 1.0) to the synthesized profile based on source agreement, data completeness, and recency.
-
-5. **generate_signals** -- Extracts ICP signals and suggests potential project ideas based on the synthesized profile. Produces structured lists for downstream consumption.
-
-### Data Flow
+StateGraph with parallel enrichment fan-out in `graph/`:
 
 ```
-EnrichmentRequest
-    |
-    v
-[fetch_sources] -- raw HTML/JSON per source
-    |
-    v
-[extract_data] -- structured EnrichmentSource objects
-    |
-    v
-[synthesize_profile] -- unified narrative text
-    |
-    v
-[score_confidence] -- confidence float
-    |
-    v
-[generate_signals] -- icp_signals[], suggested_projects[]
-    |
-    v
-EnrichmentProfile (persisted to Supabase)
+fetch_application -> init_profile -+-> enrich_pdl ------+
+                                   |-> enrich_brightdata |-> store_enrichment
+                                   +-> enrich_firecrawl -+
+                                                            |
+                                                      synthesize -> score -> finalize
+                                                              |           |
+                                                    generate_ideas       END
 ```
 
-### Storage
+### Data Sources
 
-All profiles and sources are stored in Supabase (PostgreSQL) with Row Level Security enabled. Profiles are cached for a configurable TTL (default: 24 hours).
+| Source | API | Returns |
+|--------|-----|---------|
+| **PeopleDataLabs** | `POST /v5/person/enrich` | job_title, company, industry, skills, experience, education |
+| **Bright Data** | `POST /datasets/v3/trigger` then poll snapshot | headline, about, posts, recommendations, followers, experience |
+| **Firecrawl** | `POST /v1/extract` then poll job | services, industries_served, case_study_topics, differentiators |
+
+### Claude Synthesis Stages
+
+| Stage | Model | Max Tokens | Output |
+|-------|-------|------------|--------|
+| Consultant Assessment | claude-sonnet-4 | 2048 | practice_maturity, ai_readiness, seniority_tier, summary, strengths |
+| Psychographic + Sales Intel | claude-sonnet-4 | 2048 | communication_style, risk_tolerance, ideal_pitch_angle, objections |
+| ICP Pre-Score | claude-sonnet-4 | 1024 | overall_score (0-100), fit_category, attribute_scores |
+| Project Ideas | claude-sonnet-4 | 4096 | 3 project ideas with fictional_client, wow_factor |
 
 ## Setup
 
@@ -73,126 +91,70 @@ All profiles and sources are stored in Supabase (PostgreSQL) with Row Level Secu
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | API key for Anthropic Claude |
+| `ANTHROPIC_API_KEY` | Yes | Claude API key for synthesis |
 | `SUPABASE_URL` | Yes | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (for RLS bypass in server context) |
-| `ENRICHMENT_MAX_SOURCES` | No | Maximum number of sources to fetch per enrichment (default: 5) |
-| `ENRICHMENT_CACHE_TTL_HOURS` | No | Hours to cache enrichment profiles (default: 24) |
-| `ENRICHMENT_MAX_CONCURRENT` | No | Maximum concurrent enrichment pipelines (default: 3) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key |
+| `PDL_API_KEY` | Yes | PeopleDataLabs API key |
+| `BRIGHTDATA_API_KEY` | Yes | Bright Data API key |
+| `FIRECRAWL_API_KEY` | Yes | Firecrawl API key |
+| `USE_LANGGRAPH_ENRICHMENT` | No | `true` to use LangGraph pipeline (default: `false`) |
+| `SYNTHESIS_MODEL` | No | Claude model for synthesis (default: `claude-sonnet-4-20250514`) |
 
-### Database Migrations
+### Database
 
 Run the migration to create required tables:
 
 ```bash
-# Apply from the module's migrations directory
 psql $DATABASE_URL -f modules/stakeholder_enrichment/migrations/001_create_tables.sql
 ```
 
-### Configuration
-
-The module extends `CoreConfig` via `EnrichmentConfig` in `config.py`. All settings can be overridden via environment variables with the `ENRICHMENT_` prefix.
+**Prerequisite tables**: `beta_applications` and `icp_definitions` must already exist.
 
 ## API Reference
 
 ### POST /api/v1/enrichment/enrich
 
-Trigger a stakeholder enrichment pipeline.
+Trigger full enrichment pipeline (fire-and-forget).
 
-**Request Body:**
-
+**Request:**
 ```json
-{
-  "stakeholder_name": "Jane Smith",
-  "linkedin_url": "https://linkedin.com/in/janesmith",
-  "company_url": "https://acmecorp.com/about",
-  "additional_context": "CTO, interested in AI/ML infrastructure"
-}
+{ "beta_application_id": "uuid-string" }
 ```
 
-**Response (201 Created):**
-
+**Response (200):**
 ```json
-{
-  "profile": {
-    "id": "a1b2c3d4-...",
-    "stakeholder_name": "Jane Smith",
-    "sources": [
-      {
-        "source_type": "linkedin",
-        "url": "https://linkedin.com/in/janesmith",
-        "raw_data": {},
-        "extracted_at": "2026-02-11T10:00:00Z",
-        "confidence": 0.85
-      }
-    ],
-    "synthesis": "Jane Smith is the CTO of Acme Corp...",
-    "confidence_score": 0.82,
-    "icp_signals": ["technical-leader", "ai-ml-interest", "enterprise-scale"],
-    "suggested_projects": ["ML infrastructure audit", "AI strategy workshop"],
-    "created_at": "2026-02-11T10:00:00Z",
-    "updated_at": "2026-02-11T10:00:00Z"
-  },
-  "status": "completed"
-}
+{ "status": "accepted", "message": "Enrichment started" }
 ```
 
-### GET /api/v1/enrichment/profiles/{profile_id}
+Results are written asynchronously to `enrichment_profiles`, `icp_fit_assessments`, and `demo_project_ideas` tables.
 
-Retrieve an enrichment profile by ID.
+### POST /api/v1/enrichment/generate-ideas
 
-**Path Parameters:**
+Generate personalized project ideas from stored enrichment data.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `profile_id` | UUID | The profile's unique identifier |
-
-**Response (200 OK):** Returns `EnrichmentProfile` object.
-
-**Response (404 Not Found):** Profile does not exist.
-
-### GET /api/v1/enrichment/profiles
-
-List enrichment profiles with pagination.
-
-**Query Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `limit` | int | 20 | Number of profiles to return (max 100) |
-| `offset` | int | 0 | Offset for pagination |
-
-**Response (200 OK):**
-
+**Request:**
 ```json
-{
-  "profiles": [...],
-  "total": 42
-}
+{ "enrichment_profile_id": "uuid-string" }
 ```
 
-### DELETE /api/v1/enrichment/profiles/{profile_id}
+**Response (200):**
+```json
+{ "status": "accepted", "message": "Idea generation started" }
+```
 
-Delete an enrichment profile and all associated sources.
-
-**Path Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `profile_id` | UUID | The profile's unique identifier |
-
-**Response (204 No Content):** Profile deleted successfully.
-
-**Response (404 Not Found):** Profile does not exist.
+Results are written to `demo_project_ideas` table (deletes existing ideas first for idempotency).
 
 ## Gotchas
 
-- **LinkedIn rate limits**: LinkedIn aggressively blocks scrapers. The module uses configurable delays and respects rate limits, but enrichment from LinkedIn may fail or return partial data. Always check the `confidence` score on LinkedIn sources.
-- **LinkedIn authentication**: Direct scraping of LinkedIn requires authentication. Phase 1 uses stub data; Phase 2 will integrate with a LinkedIn data provider API.
-- **Cache management**: Profiles are cached for `ENRICHMENT_CACHE_TTL_HOURS`. If a stakeholder's profile changes, you may need to delete and re-enrich.
-- **Token costs**: The synthesis and signal generation steps use Anthropic Claude. Each enrichment costs approximately 2,000-5,000 tokens depending on source richness. Monitor usage.
-- **RLS policies**: The migration enables RLS but does not create policies. You must create appropriate RLS policies for your auth scheme before deploying.
-- **Concurrent limits**: The `ENRICHMENT_MAX_CONCURRENT` setting controls how many pipelines run simultaneously. Exceeding this will queue requests.
+- **BrightData schema quirks**: Uses `position` (not `headline`), `followers` (not `followers_count`), posts have `title` + `attribution` (not `text`). The `_parse_brightdata_profile` function normalizes these.
+- **BrightData trigger+poll**: `/datasets/v3/trigger` returns `snapshot_id`, must poll `/datasets/v3/snapshot/{id}`. NOT truly synchronous despite docs.
+- **Firecrawl async**: `/v1/extract` returns `{success, id}`, must poll `GET /v1/extract/{id}`. Sometimes returns data directly.
+- **DB check constraints**: `enrichment_status` must be one of: `pending`, `enriching`, `scored`, `accepted`, `ideas_ready`, `booked`, `content_ready`, `seeded`, `failed`. `fit_category` must be: `strong_fit`, `moderate_fit`, `weak_fit`, `anti_pattern`.
+- **Background task crashes**: Unhandled exceptions in FastAPI background tasks silently die. All pipelines wrap in try/except with status fallback to `failed`.
+- **httpx non-2xx**: `httpx` does NOT raise on non-2xx status codes. Must check `res.status_code` manually.
+- **JSONB columns**: Supabase PostgREST accepts raw dicts for JSONB -- do NOT `json.dumps()` them.
+- **Token costs**: Each full enrichment uses ~10k-15k Claude tokens across 3-4 synthesis calls.
+- **pydantic-settings v2**: Cannot parse `list[str]` from env vars. Use `str` type + manual parsing (see `_parse_origins` in config.py).
 
 ## Examples
 
@@ -201,32 +163,25 @@ Delete an enrichment profile and all associated sources.
 ```bash
 curl -X POST https://your-api.example.com/api/v1/enrichment/enrich \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $API_TOKEN" \
-  -d '{
-    "stakeholder_name": "Jane Smith",
-    "linkedin_url": "https://linkedin.com/in/janesmith",
-    "company_url": "https://acmecorp.com/about",
-    "additional_context": "CTO, interested in AI/ML infrastructure"
-  }'
+  -d '{ "beta_application_id": "a1b2c3d4-5678-9abc-def0-123456789abc" }'
 ```
 
-### Get a profile
+### Generate ideas for an enriched profile
 
 ```bash
-curl https://your-api.example.com/api/v1/enrichment/profiles/a1b2c3d4-5678-9abc-def0-123456789abc \
-  -H "Authorization: Bearer $API_TOKEN"
+curl -X POST https://your-api.example.com/api/v1/enrichment/generate-ideas \
+  -H "Content-Type: application/json" \
+  -d '{ "enrichment_profile_id": "a1b2c3d4-5678-9abc-def0-123456789abc" }'
 ```
 
-### List profiles with pagination
+## Source File Mapping
 
-```bash
-curl "https://your-api.example.com/api/v1/enrichment/profiles?limit=10&offset=0" \
-  -H "Authorization: Bearer $API_TOKEN"
-```
-
-### Delete a profile
-
-```bash
-curl -X DELETE https://your-api.example.com/api/v1/enrichment/profiles/a1b2c3d4-5678-9abc-def0-123456789abc \
-  -H "Authorization: Bearer $API_TOKEN"
-```
+| Module File | Production Source |
+|-------------|------------------|
+| `router.py` | `icp-service/app/api/enrichment.py` |
+| `service.py` (data sources) | `icp-service/app/services/enrichment.py` |
+| `service.py` (synthesis) | `icp-service/app/services/synthesis.py` |
+| `service.py` (pipelines) | `icp-service/app/api/enrichment.py` |
+| `models.py` | `icp-service/app/models/enrichment.py` |
+| `config.py` | `icp-service/app/config.py` |
+| `graph/` | `icp-service/app/graph/enrichment/` |

@@ -1,31 +1,31 @@
 [module]
 name = "stakeholder_enrichment"
-version = "0.1.0"
-description = "Multi-source stakeholder profile enrichment with AI synthesis"
+version = "1.0.0"
+description = "Multi-source stakeholder enrichment pipeline with AI synthesis, ICP scoring, and project idea generation"
 status = "stable"
 category = "enrichment"
 author = "RTG"
 
 [module.dependencies]
-python = ["httpx", "langchain-anthropic", "langgraph"]
-services = ["supabase", "anthropic"]
+python = ["httpx", "anthropic", "langgraph", "pydantic", "pydantic-settings"]
+services = ["supabase", "anthropic", "peopledatalabs", "brightdata", "firecrawl"]
 modules = []
 
 [module.api]
 prefix = "/api/v1/enrichment"
-auth_required = true
+auth_required = false
 
 [module.database]
-tables = ["enrichment_profiles", "enrichment_sources"]
+tables = ["enrichment_profiles", "icp_fit_assessments", "demo_project_ideas", "beta_applications", "icp_definitions"]
 requires_rls = true
 
 [ai]
-use_when = "Need to enrich stakeholder profiles from LinkedIn, company websites, or other public sources"
-input_summary = "LinkedIn URL and/or company website URL -> triggers multi-source enrichment pipeline"
-output_summary = "Structured profile with AI synthesis, confidence scores, ICP signals, and suggested project ideas"
+use_when = "Need to enrich beta applicant / stakeholder profiles from LinkedIn, company websites, and public data sources, then synthesize with AI for consultant assessment, ICP scoring, and demo project idea generation"
+input_summary = "beta_application_id (UUID) referencing a beta_applications row with linkedin_url, company_website, and form responses"
+output_summary = "enrichment_profiles row with PDL/BrightData/Firecrawl raw data, Claude consultant assessment (practice_maturity, ai_readiness, seniority_tier, etc.), psychographic + sales intel, ICP pre-score (0-100 with fit_category), and up to 3 personalized demo project ideas"
 complexity = "high"
 estimated_setup_minutes = 30
-related_modules = ["icp_signal_extraction"]
+related_modules = ["icp_signal_extraction", "meeting_intelligence"]
 
 [health]
 last_validated = "2026-02-11"

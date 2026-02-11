@@ -16,6 +16,10 @@ export async function loadModuleDocs(): Promise<Record<string, string>> {
   return fetchJson<Record<string, string>>('modules-docs.json');
 }
 
+export async function loadModuleSources(): Promise<Record<string, Record<string, string>>> {
+  return fetchJson<Record<string, Record<string, string>>>('modules-sources.json');
+}
+
 export async function loadSkills(): Promise<SkillMeta[]> {
   return fetchJson<SkillMeta[]>('skills-index.json');
 }

@@ -1,106 +1,67 @@
-"""FastAPI router for the stakeholder enrichment module."""
+"""FastAPI router for the stakeholder enrichment module.
+
+Endpoints:
+  POST /enrich          — trigger full enrichment pipeline (background task)
+  POST /generate-ideas  — generate project ideas from stored enrichment data (background task)
+
+Both endpoints are fire-and-forget: they accept the request, queue a background task,
+and immediately return an acknowledgement. Pipeline results are written to Supabase.
+"""
 
 from __future__ import annotations
 
-from uuid import UUID
+import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks
 
+from .config import get_settings
 from .models import (
-    EnrichmentListResponse,
-    EnrichmentRequest,
-    EnrichmentResponse,
+    EnrichRequest,
+    EnrichResponse,
+    GenerateIdeasRequest,
+    GenerateIdeasResponse,
 )
-from .service import EnrichmentService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# ---------------------------------------------------------------------------
-# Dependency: singleton service instance
-# ---------------------------------------------------------------------------
 
-_service: EnrichmentService | None = None
+@router.post("/enrich", response_model=EnrichResponse)
+async def enrich_applicant(
+    payload: EnrichRequest,
+    background_tasks: BackgroundTasks,
+):
+    """Trigger full enrichment pipeline. Runs as a background task.
 
+    Routes to LangGraph pipeline if use_langgraph_enrichment is enabled,
+    otherwise uses the legacy sequential pipeline.
+    """
+    settings = get_settings()
+    if settings.use_langgraph_enrichment:
+        from .graph.runner import run_enrichment_graph
 
-def get_service() -> EnrichmentService:
-    """FastAPI dependency that provides the EnrichmentService singleton."""
-    global _service
-    if _service is None:
-        _service = EnrichmentService()
-    return _service
+        background_tasks.add_task(run_enrichment_graph, payload.beta_application_id)
+    else:
+        from .service import run_enrichment_pipeline
 
-
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
-
-
-@router.post(
-    "/enrich",
-    response_model=EnrichmentResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Trigger stakeholder enrichment",
-    description=(
-        "Submit a stakeholder for multi-source enrichment. Returns the "
-        "enriched profile with AI synthesis, confidence scores, ICP "
-        "signals, and suggested projects."
-    ),
-)
-async def enrich_stakeholder(
-    request: EnrichmentRequest,
-    service: EnrichmentService = Depends(get_service),
-) -> EnrichmentResponse:
-    profile = await service.enrich_stakeholder(request)
-    return EnrichmentResponse(profile=profile, status="completed")
+        background_tasks.add_task(run_enrichment_pipeline, payload.beta_application_id)
+    return EnrichResponse(status="accepted", message="Enrichment started")
 
 
-@router.get(
-    "/profiles/{profile_id}",
-    response_model=EnrichmentResponse,
-    summary="Get enrichment profile",
-    description="Retrieve a single enrichment profile by its UUID.",
-)
-async def get_profile(
-    profile_id: UUID,
-    service: EnrichmentService = Depends(get_service),
-) -> EnrichmentResponse:
-    profile = await service.get_profile(profile_id)
-    if profile is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Enrichment profile not found: {profile_id}",
-        )
-    return EnrichmentResponse(profile=profile, status="completed")
+@router.post("/generate-ideas", response_model=GenerateIdeasResponse)
+async def generate_ideas(
+    payload: GenerateIdeasRequest,
+    background_tasks: BackgroundTasks,
+):
+    """Generate personalized project ideas. Runs as a background task."""
+    settings = get_settings()
+    if settings.use_langgraph_enrichment:
+        from .graph.runner import run_ideas_graph
 
+        background_tasks.add_task(run_ideas_graph, payload.enrichment_profile_id)
+    else:
+        from .service import run_ideas_pipeline
 
-@router.get(
-    "/profiles",
-    response_model=EnrichmentListResponse,
-    summary="List enrichment profiles",
-    description="List enrichment profiles with pagination support.",
-)
-async def list_profiles(
-    limit: int = Query(default=20, ge=1, le=100, description="Number of profiles to return"),
-    offset: int = Query(default=0, ge=0, description="Offset for pagination"),
-    service: EnrichmentService = Depends(get_service),
-) -> EnrichmentListResponse:
-    profiles, total = await service.list_profiles(limit=limit, offset=offset)
-    return EnrichmentListResponse(profiles=profiles, total=total)
-
-
-@router.delete(
-    "/profiles/{profile_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete enrichment profile",
-    description="Delete an enrichment profile and all associated source data.",
-)
-async def delete_profile(
-    profile_id: UUID,
-    service: EnrichmentService = Depends(get_service),
-) -> None:
-    deleted = await service.delete_profile(profile_id)
-    if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Enrichment profile not found: {profile_id}",
-        )
+        background_tasks.add_task(run_ideas_pipeline, payload.enrichment_profile_id)
+    return GenerateIdeasResponse(status="accepted", message="Idea generation started")

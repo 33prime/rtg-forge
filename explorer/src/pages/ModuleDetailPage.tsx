@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { loadModules, loadModuleDocs } from '../lib/data';
+import { loadModules, loadModuleDocs, loadModuleSources } from '../lib/data';
 import ModuleDetail from '../components/modules/ModuleDetail';
 import EmptyState from '../components/shared/EmptyState';
 
@@ -16,6 +16,11 @@ export default function ModuleDetailPage() {
   const { data: docs } = useQuery({
     queryKey: ['module-docs'],
     queryFn: loadModuleDocs,
+  });
+
+  const { data: sources } = useQuery({
+    queryKey: ['module-sources'],
+    queryFn: loadModuleSources,
   });
 
   if (modulesLoading) {
@@ -41,5 +46,7 @@ export default function ModuleDetailPage() {
 
   const moduleDoc = docs?.[name ?? ''];
 
-  return <ModuleDetail module={module} docs={moduleDoc} />;
+  const moduleSources = sources?.[name ?? ''];
+
+  return <ModuleDetail module={module} docs={moduleDoc} sources={moduleSources} />;
 }

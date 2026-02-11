@@ -1,43 +1,35 @@
 """Contract tests for the stakeholder_enrichment module.
 
-These tests verify that the module adheres to the RTG Forge Module Contract
-as defined in modules/MODULE_CONTRACT.md.
+Verifies the module adheres to the RTG Forge Module Contract.
 """
 
 from __future__ import annotations
-
-from datetime import datetime
-from uuid import uuid4
 
 import pytest
 
 
 # ---------------------------------------------------------------------------
-# test_module_info_exports
+# Module Info
 # ---------------------------------------------------------------------------
 
 
 def test_module_info_exports():
-    """ModuleInfo is exported with all required fields populated correctly."""
+    """ModuleInfo is exported with all required fields."""
     from modules.stakeholder_enrichment import ModuleInfo, module_info
 
     assert isinstance(module_info, ModuleInfo)
     assert module_info.name == "stakeholder_enrichment"
-    assert module_info.version == "0.1.0"
-    assert module_info.description == (
-        "Multi-source stakeholder profile enrichment with AI synthesis"
-    )
+    assert module_info.version == "1.0.0"
     assert module_info.prefix == "/api/v1/enrichment"
     assert module_info.tags == ["enrichment"]
 
-    # Router should be a FastAPI APIRouter
     from fastapi import APIRouter
 
     assert isinstance(module_info.router, APIRouter)
 
 
 # ---------------------------------------------------------------------------
-# test_router_has_routes
+# Router
 # ---------------------------------------------------------------------------
 
 
@@ -53,127 +45,126 @@ def test_router_has_routes():
 
     expected = {
         ("/enrich", ("POST",)),
-        ("/profiles/{profile_id}", ("GET",)),
-        ("/profiles", ("GET",)),
-        ("/profiles/{profile_id}", ("DELETE",)),
+        ("/generate-ideas", ("POST",)),
     }
 
-    assert expected.issubset(routes), (
-        f"Missing routes. Expected {expected}, got {routes}"
-    )
+    assert expected.issubset(routes), f"Missing routes. Expected {expected}, got {routes}"
 
 
 # ---------------------------------------------------------------------------
-# test_models_validate
+# Models
 # ---------------------------------------------------------------------------
 
 
-def test_models_validate_enrichment_request():
-    """EnrichmentRequest validates with required and optional fields."""
-    from modules.stakeholder_enrichment.models import EnrichmentRequest
+def test_enrich_request_validates():
+    """EnrichRequest requires beta_application_id."""
+    from modules.stakeholder_enrichment.models import EnrichRequest
 
-    # Minimal -- only required field
-    req = EnrichmentRequest(stakeholder_name="Jane Smith")
-    assert req.stakeholder_name == "Jane Smith"
-    assert req.linkedin_url is None
-    assert req.company_url is None
-    assert req.additional_context is None
-
-    # Full
-    req_full = EnrichmentRequest(
-        stakeholder_name="Jane Smith",
-        linkedin_url="https://linkedin.com/in/janesmith",
-        company_url="https://acmecorp.com",
-        additional_context="CTO, AI/ML",
-    )
-    assert req_full.linkedin_url == "https://linkedin.com/in/janesmith"
+    req = EnrichRequest(beta_application_id="abc-123")
+    assert req.beta_application_id == "abc-123"
 
 
-def test_models_validate_enrichment_profile():
-    """EnrichmentProfile validates with all fields."""
-    from modules.stakeholder_enrichment.models import (
-        EnrichmentProfile,
-        EnrichmentSource,
-    )
-
-    source = EnrichmentSource(
-        source_type="linkedin",
-        url="https://linkedin.com/in/janesmith",
-        raw_data={"title": "CTO"},
-        extracted_at=datetime.utcnow(),
-        confidence=0.85,
-    )
-    assert source.confidence == 0.85
-
-    profile = EnrichmentProfile(
-        id=uuid4(),
-        stakeholder_name="Jane Smith",
-        sources=[source],
-        synthesis="Jane Smith is a CTO...",
-        confidence_score=0.82,
-        icp_signals=["technical-leader"],
-        suggested_projects=["AI audit"],
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
-    )
-    assert profile.stakeholder_name == "Jane Smith"
-    assert len(profile.sources) == 1
-    assert profile.confidence_score == 0.82
-    assert "technical-leader" in profile.icp_signals
-
-
-def test_models_validate_enrichment_request_rejects_empty_name():
-    """EnrichmentRequest rejects an empty stakeholder_name."""
+def test_enrich_request_rejects_missing_id():
+    """EnrichRequest rejects missing beta_application_id."""
     from pydantic import ValidationError
 
-    from modules.stakeholder_enrichment.models import EnrichmentRequest
+    from modules.stakeholder_enrichment.models import EnrichRequest
 
     with pytest.raises(ValidationError):
-        EnrichmentRequest(stakeholder_name="")
+        EnrichRequest()
 
 
-def test_models_validate_confidence_bounds():
-    """EnrichmentSource and EnrichmentProfile reject confidence outside [0, 1]."""
+def test_enrich_response_defaults():
+    """EnrichResponse has sensible defaults."""
+    from modules.stakeholder_enrichment.models import EnrichResponse
+
+    resp = EnrichResponse()
+    assert resp.status == "accepted"
+    assert resp.message == "Enrichment started"
+
+
+def test_generate_ideas_request_validates():
+    """GenerateIdeasRequest requires enrichment_profile_id."""
+    from modules.stakeholder_enrichment.models import GenerateIdeasRequest
+
+    req = GenerateIdeasRequest(enrichment_profile_id="xyz-456")
+    assert req.enrichment_profile_id == "xyz-456"
+
+
+def test_consultant_assessment_optional_fields():
+    """ConsultantAssessment fields are all optional."""
+    from modules.stakeholder_enrichment.models import ConsultantAssessment
+
+    ca = ConsultantAssessment()
+    assert ca.practice_maturity is None
+    assert ca.key_strengths == []
+
+
+def test_icp_pre_score_validates():
+    """IcpPreScore validates required fields and score bounds."""
+    from modules.stakeholder_enrichment.models import IcpPreScore
+
+    score = IcpPreScore(
+        overall_score=75,
+        fit_category="strong_fit",
+        reasoning="Good match",
+    )
+    assert score.overall_score == 75
+    assert score.attribute_scores == {}
+
+
+def test_icp_pre_score_rejects_invalid_score():
+    """IcpPreScore rejects scores outside [0, 100]."""
     from pydantic import ValidationError
 
-    from modules.stakeholder_enrichment.models import (
-        EnrichmentProfile,
-        EnrichmentSource,
-    )
+    from modules.stakeholder_enrichment.models import IcpPreScore
 
     with pytest.raises(ValidationError):
-        EnrichmentSource(
-            source_type="test",
-            url="https://example.com",
-            confidence=1.5,
-        )
+        IcpPreScore(overall_score=150, fit_category="strong_fit", reasoning="test")
 
     with pytest.raises(ValidationError):
-        EnrichmentProfile(
-            stakeholder_name="Test",
-            confidence_score=-0.1,
-        )
+        IcpPreScore(overall_score=-1, fit_category="strong_fit", reasoning="test")
 
 
 # ---------------------------------------------------------------------------
-# test_config_loads
+# Config
 # ---------------------------------------------------------------------------
 
 
 def test_config_loads():
     """EnrichmentConfig can be instantiated with defaults."""
-    try:
-        from modules.stakeholder_enrichment.config import EnrichmentConfig
+    from modules.stakeholder_enrichment.config import EnrichmentConfig
 
-        config = EnrichmentConfig()
-        assert config.enrichment_max_sources == 5
-        assert config.enrichment_cache_ttl_hours == 24
-        assert config.enrichment_max_concurrent == 3
-    except Exception:
-        # If CoreConfig requires env vars that aren't set, we at least
-        # verify the import succeeds and the class exists.
-        from modules.stakeholder_enrichment.config import EnrichmentConfig
+    config = EnrichmentConfig()
+    assert config.synthesis_model == "claude-sonnet-4-20250514"
+    assert config.use_langgraph_enrichment is False
+    assert config.supabase_url == ""
 
-        assert hasattr(EnrichmentConfig, "enrichment_max_sources")
-        assert hasattr(EnrichmentConfig, "enrichment_cache_ttl_hours")
-        assert hasattr(EnrichmentConfig, "enrichment_max_concurrent")
+
+def test_config_singleton():
+    """get_settings returns the same instance."""
+    from modules.stakeholder_enrichment.config import get_settings
+
+    s1 = get_settings()
+    s2 = get_settings()
+    assert s1 is s2
+
+
+# ---------------------------------------------------------------------------
+# Service Functions Exist
+# ---------------------------------------------------------------------------
+
+
+def test_service_exports():
+    """service.py exports the expected functions."""
+    from modules.stakeholder_enrichment import service
+
+    assert callable(service.enrich_pdl)
+    assert callable(service.enrich_brightdata)
+    assert callable(service.enrich_firecrawl)
+    assert callable(service.synthesize_consultant)
+    assert callable(service.score_icp_fit)
+    assert callable(service.generate_project_ideas)
+    assert callable(service.generate_psychographic_sales_intel)
+    assert callable(service.run_enrichment_pipeline)
+    assert callable(service.run_ideas_pipeline)

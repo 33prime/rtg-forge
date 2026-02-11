@@ -37,10 +37,43 @@ function getDirs(dirPath: string): string[] {
     .map((d) => d.name);
 }
 
+const SOURCE_FILES = [
+  'router.py', 'service.py', 'models.py', 'config.py', '__init__.py',
+];
+
+const SOURCE_DIRS = ['graph', 'migrations'];
+
+function collectSourceFiles(moduleDir: string): Record<string, string> {
+  const sources: Record<string, string> = {};
+
+  for (const file of SOURCE_FILES) {
+    const filePath = path.join(moduleDir, file);
+    if (fs.existsSync(filePath)) {
+      sources[file] = fs.readFileSync(filePath, 'utf-8');
+    }
+  }
+
+  for (const dir of SOURCE_DIRS) {
+    const dirPath = path.join(moduleDir, dir);
+    if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
+      const files = fs.readdirSync(dirPath).filter((f) => !f.startsWith('.'));
+      for (const file of files) {
+        const filePath = path.join(dirPath, file);
+        if (fs.statSync(filePath).isFile()) {
+          sources[`${dir}/${file}`] = fs.readFileSync(filePath, 'utf-8');
+        }
+      }
+    }
+  }
+
+  return sources;
+}
+
 function buildModulesIndex(): void {
   const modulesDir = path.join(ROOT, 'modules');
   const modules: Record<string, unknown>[] = [];
   const docs: Record<string, string> = {};
+  const sources: Record<string, Record<string, string>> = {};
 
   for (const name of getDirs(modulesDir)) {
     const tomlPath = path.join(modulesDir, name, 'module.toml');
@@ -55,6 +88,11 @@ function buildModulesIndex(): void {
     if (md) {
       docs[name] = md;
     }
+
+    const moduleSource = collectSourceFiles(path.join(modulesDir, name));
+    if (Object.keys(moduleSource).length > 0) {
+      sources[name] = moduleSource;
+    }
   }
 
   fs.writeFileSync(path.join(OUT_DIR, 'modules-index.json'), JSON.stringify(modules, null, 2));
@@ -62,6 +100,9 @@ function buildModulesIndex(): void {
 
   fs.writeFileSync(path.join(OUT_DIR, 'modules-docs.json'), JSON.stringify(docs, null, 2));
   console.log(`  modules-docs.json: ${Object.keys(docs).length} docs`);
+
+  fs.writeFileSync(path.join(OUT_DIR, 'modules-sources.json'), JSON.stringify(sources, null, 2));
+  console.log(`  modules-sources.json: ${Object.keys(sources).length} modules with source`);
 }
 
 function buildSkillsIndex(): void {
