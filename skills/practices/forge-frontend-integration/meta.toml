@@ -1,0 +1,29 @@
+[skill]
+name = "forge-frontend-integration"
+version = "1.0.0"
+tier = "foundation"
+category = "practices"
+relevance_tags = ["react", "typescript", "frontend", "api", "hooks", "tanstack-query", "forms", "components"]
+priority_weight = 90
+description = "Build frontend code that integrates cleanly with RTG Forge backend modules — typed API clients, hooks, and component patterns."
+
+[relationships]
+prerequisites = []
+complements = ["forge-ready-modules", "react-typescript-patterns", "tailwind-design-system"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+  "Inline fetch calls instead of typed hooks",
+  "Duplicating backend types instead of mirroring models.py",
+  "Missing error and loading states in hooks",
+  "Untyped API responses cast with 'as any'",
+  "Business logic in components instead of hooks",
+  "No optimistic updates for mutations",
+]

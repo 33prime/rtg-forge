@@ -149,6 +149,23 @@ For modules that use LangGraph for AI orchestration:
 - `nodes.py` -- Individual node functions
 - `state.py` -- TypedDict or Pydantic model for graph state
 
+### `frontend/` -- Frontend Integration Layer
+
+For modules with a user-facing UI, an optional `frontend/` directory provides the TypeScript bridge between the backend API and React components.
+
+| File | Portability | Purpose |
+|------|-------------|---------|
+| `types.ts` | **High** — copy directly | TypeScript interfaces mirroring `models.py` |
+| `hooks.ts` | **High** — adjust `API_BASE` only | React Query hooks, one per endpoint |
+| `*.tsx` | **Reference only** — rewrite per project | Example components showing how to consume the hooks |
+
+The `types.ts` and `hooks.ts` are the portable core. Components are included as references for Claude to adapt to the target project's design system during `/use-module`.
+
+When extracting a module with `/add-module`, include frontend files if they exist. When installing with `/use-module`, Claude should:
+1. Copy `types.ts` as-is (adjusting field casing if needed)
+2. Adapt `hooks.ts` (update API base, match project's fetching patterns)
+3. Rewrite components from scratch using the project's design system, informed by the reference
+
 ### `pyproject.toml` -- Package Metadata
 
 If the module is independently installable, include a `pyproject.toml` with dependencies.

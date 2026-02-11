@@ -1,0 +1,30 @@
+[skill]
+name = "forge-ready-modules"
+version = "1.0.0"
+tier = "foundation"
+category = "practices"
+relevance_tags = ["python", "fastapi", "backend", "module", "api", "service", "architecture"]
+priority_weight = 95
+description = "Build backend features as self-contained modules that can be extracted to RTG Forge without refactoring."
+
+[relationships]
+prerequisites = []
+complements = ["python-clean-architecture", "fastapi-patterns", "supabase-database-design", "error-handling"]
+supersedes = []
+
+[optimization]
+last_optimized = "2026-02-11"
+token_count = 0
+token_count_previous = 0
+growth_justified = true
+
+[tracking]
+common_mistakes = [
+  "Business logic mixed into route handlers",
+  "Framework imports in service layer",
+  "Raw os.getenv instead of pydantic-settings config",
+  "Models defined inline in router instead of models.py",
+  "Global state shared between modules",
+  "SQL without RLS or created_at defaults",
+  "No __init__.py with ModuleInfo export",
+]
