@@ -37,8 +37,104 @@ body {
   border-radius: 3px;
 }
 
-/* Code block styling */
+/* Code block styling — IDE-like syntax highlighting */
 pre code {
   font-size: 0.875rem;
-  line-height: 1.5;
+  line-height: 1.7;
+  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+  color: #e4e4e7;
+}
+
+/* Keywords: if, def, class, return, import, from, etc. */
+pre code .hljs-keyword,
+pre code .hljs-built_in {
+  color: #c084fc; /* purple */
+}
+
+/* Strings */
+pre code .hljs-string,
+pre code .hljs-doctag {
+  color: #86efac; /* green */
+}
+
+/* Functions and method names */
+pre code .hljs-title.function_,
+pre code .hljs-title {
+  color: #67e8f9; /* cyan */
+}
+
+/* Class names and types */
+pre code .hljs-title.class_,
+pre code .hljs-type {
+  color: #fbbf24; /* amber */
+}
+
+/* Numbers */
+pre code .hljs-number {
+  color: #f9a8d4; /* pink */
+}
+
+/* Comments */
+pre code .hljs-comment {
+  color: #52525b; /* muted zinc */
+  font-style: italic;
+}
+
+/* Decorators, meta */
+pre code .hljs-meta,
+pre code .hljs-meta .hljs-keyword {
+  color: #fb923c; /* orange */
+}
+
+/* Variables and params */
+pre code .hljs-params,
+pre code .hljs-variable {
+  color: #e4e4e7; /* default text */
+}
+
+/* Attributes (HTML/JSX) */
+pre code .hljs-attr,
+pre code .hljs-attribute {
+  color: #67e8f9; /* cyan */
+}
+
+/* Operators */
+pre code .hljs-operator {
+  color: #f472b6; /* pink */
+}
+
+/* Property access */
+pre code .hljs-property {
+  color: #93c5fd; /* light blue */
+}
+
+/* Punctuation */
+pre code .hljs-punctuation {
+  color: #71717a; /* zinc */
+}
+
+/* SQL specific */
+pre code .hljs-keyword + .hljs-type {
+  color: #fbbf24;
+}
+
+/* Constant / boolean */
+pre code .hljs-literal,
+pre code .hljs-symbol {
+  color: #f9a8d4; /* pink */
+}
+
+/* Self / this */
+pre code .hljs-variable.language_ {
+  color: #f472b6; /* pink */
+}
+
+/* Import / module names */
+pre code .hljs-name {
+  color: #67e8f9; /* cyan */
+}
+
+/* Selection in code */
+pre code ::selection {
+  background: rgba(0, 155, 135, 0.3);
 }
