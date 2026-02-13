@@ -1,0 +1,33 @@
+[module]
+name = "codebase_analyzer"
+version = "1.0.0"
+description = "GitHub-powered codebase analysis with Claude synthesis — produces structured context documents for AI instruction generation"
+status = "stable"
+category = "devtools"
+author = "RTG"
+
+[module.dependencies]
+python = ["httpx", "anthropic", "pydantic", "pydantic-settings", "fastapi"]
+services = ["supabase", "anthropic", "github"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/codebase-context"
+auth_required = false
+
+[module.database]
+tables = ["codebase_context"]
+requires_rls = true
+
+[ai]
+use_when = "Need to generate or refresh a structured codebase context document by reading files from a GitHub repo and synthesizing with Claude. Supports full analysis (Sonnet) and incremental updates (Haiku) based on git commit history."
+input_summary = "No request body for GET (returns current context). POST /refresh triggers background analysis with no body."
+output_summary = "Structured markdown document with 8 sections: Architecture, File Registry, Admin Sections, Data Model, DB Constraints, Patterns, Feature Checklist, Environment. Stored in codebase_context table with status tracking (current/stale/generating)."
+complexity = "medium"
+estimated_setup_minutes = 10
+related_modules = ["feedback_to_instructions"]
+
+[health]
+last_validated = "2026-02-11"
+test_coverage = 0
+known_issues = []
