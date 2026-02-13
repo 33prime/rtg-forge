@@ -1,0 +1,33 @@
+[module]
+name = "context_assembly_engine"
+version = "0.1.0"
+description = "Deterministic context assembly engine for LLM systems — goal-directed, memory-persistent, temporally-aware. Assembles precisely the right context for every LLM call using four primitives (Block, Situation, ScoringRule, Budget) across three layers (Goals, Memory, Context)."
+status = "draft"
+category = "ai-infrastructure"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/cae"
+auth_required = false
+
+[module.database]
+tables = ["cae_goals", "cae_memories", "cae_decision_log", "cae_manifests"]
+requires_rls = true
+
+[ai]
+use_when = "Building any LLM-powered system that needs deterministic, situation-aware context curation — coaching apps, CRM agents, healthcare assistants, educational tutors, or any domain where the AI needs to act as though it deeply knows its user over time. Use instead of RAG when context relevance must be deterministic, prioritized, and budget-constrained."
+input_summary = "Entity ID + raw data dict (from gatherers) + optional mode. Engine configuration (block definitions, scoring rules, situation analyzer) defined in code."
+output_summary = "Assembled text (curated prompt section for the LLM) + full Manifest showing every block considered, its priority score, signals that influenced scoring, and whether it was included or excluded with reasons."
+complexity = "high"
+estimated_setup_minutes = 30
+related_modules = ["codebase_analyzer"]
+
+[health]
+last_validated = "2026-02-13"
+test_coverage = 0
+known_issues = []
