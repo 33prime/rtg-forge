@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "prebuild": "tsx scripts/build-index.ts",
-    "build": "tsc -b && vite build",
+    "build": "tsx scripts/build-index.ts && tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
