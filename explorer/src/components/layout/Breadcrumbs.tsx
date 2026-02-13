@@ -10,6 +10,7 @@ const labelMap: Record<string, string> = {
   workflows: 'Workflows',
   me: 'My Profile',
   'how-to': 'How To',
+  roadmap: 'Roadmap',
 };
 
 function formatSegment(segment: string): string {

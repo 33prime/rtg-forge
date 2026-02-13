@@ -10,6 +10,7 @@ import ProfileCatalog from './pages/ProfileCatalog';
 import ProfileDetailPage from './pages/ProfileDetailPage';
 import SearchPage from './pages/SearchPage';
 import HowTo from './pages/HowTo';
+import Roadmap from './pages/Roadmap';
 import UserProfile from './pages/UserProfile';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -37,6 +38,7 @@ export default function App() {
                 <Route path="/profiles/:name" element={<ProfileDetailPage />} />
                 <Route path="/search" element={<SearchPage />} />
                 <Route path="/how-to" element={<HowTo />} />
+                <Route path="/roadmap" element={<Roadmap />} />
                 <Route path="/me" element={<UserProfile />} />
               </Routes>
             </PageLayout>
