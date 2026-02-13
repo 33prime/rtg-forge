@@ -26,7 +26,16 @@ Run `/prepare-module` first if you don't know which files make up the module. It
 7. Create __init__.py with ModuleInfo dataclass export
 8. Write contract tests in tests/ (imports work, router mounts, models validate)
 9. Validate: check all required files exist per /Users/matt/rtg-forge/modules/MODULE_CONTRACT.md
-10. Create git branch in rtg-forge and commit
+10. Rebuild the explorer index so the new module appears in Forge Explorer:
+    - Run `cd /Users/matt/rtg-forge/explorer && npm run prebuild`
+    - Include the updated JSON files under `explorer/public/data/` in the commit
+11. Create git branch in rtg-forge and commit
+12. Send a Slack notification to #forge channel using the Slack MCP tool:
+    Message format:
+    "🧱 New forge module: *{module_name}* v{version}
+    _{description}_
+    Category: {category} | Tables: {tables} | Status: {status}
+    Added by: {author}"
 
 ## The Forge Module Contract
 Required files: module.toml, MODULE.md, __init__.py, router.py, service.py, models.py, config.py, migrations/, tests/

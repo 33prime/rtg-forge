@@ -128,6 +128,34 @@ def get_module(name: str, profile: str = "rtg-default") -> str:
 
 
 @mcp.tool()
+def get_module_sources(name: str, files: str = "") -> str:
+    """Get source code files for a module. Returns file contents with headers.
+
+    Use this to read a module's implementation (router.py, service.py, models.py,
+    config.py, migrations, tests, graph pipelines, etc.) from either disk or cloud.
+
+    Args:
+        name: Module directory name (e.g. "stakeholder_enrichment").
+        files: Comma-separated list of specific files to return (e.g. "router.py,service.py"). Empty = all.
+    """
+    sources = _backend.get_module_sources(name)
+    if not sources:
+        return f"Module '{name}' not found or has no source files."
+
+    if files:
+        requested = {f.strip() for f in files.split(",") if f.strip()}
+        sources = {k: v for k, v in sources.items() if k in requested}
+        if not sources:
+            return f"None of the requested files ({files}) found in module '{name}'."
+
+    lines = [f"# Source files for module: {name}\n"]
+    for filepath in sorted(sources):
+        lines.append(f"## {filepath}\n```python\n{sources[filepath]}\n```\n")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
 def search_modules(query: str, profile: str = "rtg-default") -> str:
     """Search modules by matching query against AI metadata, name, and description.
 

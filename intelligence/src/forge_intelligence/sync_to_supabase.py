@@ -100,6 +100,31 @@ def sync_skills(forge_root: Path, client: Client) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Source file collection
+# ---------------------------------------------------------------------------
+
+_SOURCE_FILES = ["__init__.py", "router.py", "service.py", "models.py", "config.py"]
+_SOURCE_DIRS = ["graph", "migrations", "tests"]
+
+
+def _collect_source_files(mod_dir: Path) -> dict[str, str]:
+    """Read all source files into a flat {path: content} dict."""
+    files: dict[str, str] = {}
+    for name in _SOURCE_FILES:
+        p = mod_dir / name
+        if p.exists():
+            files[name] = p.read_text(encoding="utf-8")
+    for dir_name in _SOURCE_DIRS:
+        sub = mod_dir / dir_name
+        if sub.is_dir():
+            for f in sorted(sub.rglob("*")):
+                if f.is_file():
+                    rel = str(f.relative_to(mod_dir))
+                    files[rel] = f.read_text(encoding="utf-8")
+    return files
+
+
+# ---------------------------------------------------------------------------
 # Modules
 # ---------------------------------------------------------------------------
 
@@ -149,6 +174,7 @@ def sync_modules(forge_root: Path, client: Client) -> int:
             "health_test_coverage": health.get("test_coverage", 0),
             "health_known_issues": health.get("known_issues", []),
             "module_md": module_md,
+            "source_files": _collect_source_files(mod_dir),
             "source_path": str(mod_dir.relative_to(forge_root)),
             "synced_at": _now_iso(),
         }

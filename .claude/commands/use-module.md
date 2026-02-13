@@ -15,8 +15,7 @@ This is NOT a blind copy-paste. You are an AI that understands both the module's
 ### Phase 2: Read the Forge Module
 5. Use the rtg-forge MCP tools to read the module:
    - Call `get_module` to read MODULE.md and module.toml
-   - Read the actual source files from /Users/matt/rtg-forge/modules/{name}/
-   - Read: router.py, service.py, models.py, config.py, graph/ (if exists), migrations/
+   - Call `get_module_sources` to read the module's source code (router.py, service.py, models.py, config.py, migrations, etc.)
 6. Understand what the module does, its dependencies, its database tables, its API shape
 
 ### Phase 3: Personalization Interview

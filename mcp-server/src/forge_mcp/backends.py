@@ -37,6 +37,9 @@ class ForgeBackend(ABC):
     @abstractmethod
     def get_module_md(self, name: str) -> str: ...
 
+    @abstractmethod
+    def get_module_sources(self, name: str) -> dict[str, str]: ...
+
     # -- Skills --
     @abstractmethod
     def scan_skills(self) -> list[dict]: ...
@@ -146,6 +149,27 @@ class FileBackend(ForgeBackend):
 
     def get_module_md(self, name: str) -> str:
         return _read_md(self.root / "modules" / name / "MODULE.md")
+
+    _SOURCE_FILES = ["__init__.py", "router.py", "service.py", "models.py", "config.py"]
+    _SOURCE_DIRS = ["graph", "migrations", "tests"]
+
+    def get_module_sources(self, name: str) -> dict[str, str]:
+        mod_dir = self.root / "modules" / name
+        if not mod_dir.is_dir():
+            return {}
+        files: dict[str, str] = {}
+        for fname in self._SOURCE_FILES:
+            p = mod_dir / fname
+            if p.exists():
+                files[fname] = p.read_text(encoding="utf-8")
+        for dir_name in self._SOURCE_DIRS:
+            sub = mod_dir / dir_name
+            if sub.is_dir():
+                for f in sorted(sub.rglob("*")):
+                    if f.is_file():
+                        rel = str(f.relative_to(mod_dir))
+                        files[rel] = f.read_text(encoding="utf-8")
+        return files
 
     # -- Skills --
 
@@ -476,6 +500,12 @@ class SupabaseBackend(ForgeBackend):
         if not resp.data:
             return ""
         return resp.data[0].get("module_md", "")
+
+    def get_module_sources(self, name: str) -> dict[str, str]:
+        resp = self._client.table("forge_modules").select("source_files").eq("name", name).execute()
+        if not resp.data:
+            return {}
+        return resp.data[0].get("source_files", {}) or {}
 
     @staticmethod
     def _row_to_module(row: dict) -> dict:
