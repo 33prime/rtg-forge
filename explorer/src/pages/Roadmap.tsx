@@ -9,6 +9,7 @@ interface RoadmapItem {
   phase: 'now' | 'next' | 'future' | 'vision';
   category: 'core' | 'intelligence' | 'developer-experience' | 'platform' | 'community';
   impact: 'foundation' | 'high' | 'transformative';
+  status?: 'done' | 'in-progress' | 'not-started';
 }
 
 const phases: { value: Phase; label: string; description: string; color: string; bg: string; border: string }[] = [
@@ -30,31 +31,51 @@ const roadmapItems: RoadmapItem[] = [
   // ── NOW ──────────────────────────────────────────────
   {
     title: 'Seed Correction Data',
-    description: 'Retroactively analyze existing projects to capture 20-30 initial corrections. Run Claude with and without skills on the same codebases and record every delta. This seeds the learning loop with real data.',
+    description: '18 corrections captured across skills — covering patterns like bare except clauses, business logic in route handlers, hardcoded prompts, missing RLS policies, and more. Decision catalog live in Explorer.',
     phase: 'now',
     category: 'intelligence',
     impact: 'foundation',
+    status: 'done',
   },
   {
     title: 'Complete Stub Modules',
-    description: 'Build out meeting_intelligence and icp_signal_extraction from stubs to full contract-compliant modules. Prove the extraction pattern works at scale beyond the single stakeholder_enrichment module.',
+    description: 'icp_signal_extraction built out with full LangGraph pipeline, router, service, models, and migrations. codebase_analyzer and context_assembly_engine added as new modules. meeting_intelligence still needs buildout.',
     phase: 'now',
     category: 'core',
     impact: 'foundation',
+    status: 'in-progress',
   },
   {
     title: 'Finish Stub Skills',
-    description: 'Complete the skills currently marked "under development" — module-extraction, code-review, and mcp-server-patterns. Fill in the SKILL.md content with real patterns and examples.',
+    description: 'All 19 skills now have complete SKILL.md content with real patterns and examples.',
     phase: 'now',
     category: 'core',
     impact: 'foundation',
+    status: 'done',
   },
   {
     title: 'Forge Explorer Roadmap Page',
-    description: 'Add this roadmap page to the Explorer to demo the vision and track progress transparently.',
+    description: 'Roadmap page live in the Explorer with phase filtering, category badges, and the flywheel visualization.',
     phase: 'now',
     category: 'developer-experience',
     impact: 'foundation',
+    status: 'done',
+  },
+  {
+    title: 'Cloud Module Sources',
+    description: 'Module source files (router.py, service.py, etc.) sync to Supabase via source_files JSONB column. New get_module_sources MCP tool serves source code from disk or cloud — users can install modules without cloning the repo.',
+    phase: 'now',
+    category: 'core',
+    impact: 'foundation',
+    status: 'done',
+  },
+  {
+    title: 'Slack Notifications on Add-Module',
+    description: '/add-module now commits to main, pushes, and sends a formatted notification to #forge with module name, version, category, tables, and status. Seamless end-to-end flow.',
+    phase: 'now',
+    category: 'developer-experience',
+    impact: 'foundation',
+    status: 'done',
   },
 
   // ── NEXT ─────────────────────────────────────────────
@@ -64,6 +85,7 @@ const roadmapItems: RoadmapItem[] = [
     phase: 'next',
     category: 'intelligence',
     impact: 'high',
+    status: 'not-started',
   },
   {
     title: 'Post-Build Audit Command',
@@ -71,6 +93,7 @@ const roadmapItems: RoadmapItem[] = [
     phase: 'next',
     category: 'developer-experience',
     impact: 'high',
+    status: 'not-started',
   },
   {
     title: 'Production Readiness Checklist',
@@ -78,6 +101,7 @@ const roadmapItems: RoadmapItem[] = [
     phase: 'next',
     category: 'developer-experience',
     impact: 'high',
+    status: 'not-started',
   },
   {
     title: 'Semantic Skill Matching',
@@ -85,13 +109,15 @@ const roadmapItems: RoadmapItem[] = [
     phase: 'next',
     category: 'intelligence',
     impact: 'high',
+    status: 'not-started',
   },
   {
     title: 'Correction Dashboard in Explorer',
-    description: 'Interactive dashboard showing correction frequency by skill, trending patterns, impact distribution, and correction rate over time. Transform the Explorer from read-only browsing to an analytics command center.',
+    description: 'Decision catalog and detail pages live in the Explorer with 18 corrections browsable by category. Shows correction patterns, instinct vs corrected behavior, observation frequency, and skill attribution.',
     phase: 'next',
     category: 'developer-experience',
     impact: 'high',
+    status: 'done',
   },
   {
     title: 'Module Upgrade Paths',
@@ -99,6 +125,7 @@ const roadmapItems: RoadmapItem[] = [
     phase: 'next',
     category: 'developer-experience',
     impact: 'high',
+    status: 'not-started',
   },
 
   // ── FUTURE ───────────────────────────────────────────
@@ -180,6 +207,12 @@ const impactConfig: Record<string, { label: string; color: string; bg: string }>
   foundation: { label: 'Foundation', color: 'text-[#a1a1aa]', bg: 'bg-[#27272a]' },
   high: { label: 'High Impact', color: 'text-primary-light', bg: 'bg-primary/10' },
   transformative: { label: 'Transformative', color: 'text-amber-400', bg: 'bg-amber-500/10' },
+};
+
+const statusConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  'done': { label: 'Shipped', color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30' },
+  'in-progress': { label: 'In Progress', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
+  'not-started': { label: '', color: '', bg: '', border: '' },
 };
 
 export default function Roadmap() {
@@ -305,8 +338,10 @@ export default function Roadmap() {
               {group.items.map((item) => {
                 const cat = categories.find((c) => c.value === item.category);
                 const imp = impactConfig[item.impact] || { label: 'Foundation', color: 'text-[#a1a1aa]', bg: 'bg-[#27272a]' };
+                const st = item.status ? statusConfig[item.status] : null;
+                const isDone = item.status === 'done';
                 return (
-                  <Card key={item.title}>
+                  <Card key={item.title} className={isDone ? 'border-green-500/20 bg-green-500/[0.03]' : ''}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2">
                         {cat && (
@@ -316,11 +351,25 @@ export default function Roadmap() {
                         )}
                         <span className="text-xs text-[#71717a]">{cat?.label}</span>
                       </div>
-                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${imp.bg} ${imp.color}`}>
-                        {imp.label}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {st && st.label && (
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${st.bg} ${st.color}`}>
+                            {st.label}
+                          </span>
+                        )}
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${imp.bg} ${imp.color}`}>
+                          {imp.label}
+                        </span>
+                      </div>
                     </div>
-                    <h3 className="mt-3 text-sm font-semibold text-[#fafafa]">{item.title}</h3>
+                    <h3 className={`mt-3 text-sm font-semibold ${isDone ? 'text-green-400' : 'text-[#fafafa]'}`}>
+                      {isDone && (
+                        <svg className="mr-1.5 -mt-0.5 inline h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )}
+                      {item.title}
+                    </h3>
                     <p className="mt-2 text-xs leading-relaxed text-[#71717a]">{item.description}</p>
                   </Card>
                 );
