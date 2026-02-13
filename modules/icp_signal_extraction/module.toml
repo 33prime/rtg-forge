@@ -1,0 +1,34 @@
+[module]
+name = "icp_signal_extraction"
+version = "0.1.0"
+description = "Extract, route, cluster, and review ICP signals from call transcripts and beta applications using LangGraph"
+status = "beta"
+category = "intelligence"
+author = "RTG"
+
+[module.dependencies]
+python = ["httpx", "anthropic", "openai", "langgraph", "langchain-core", "pydantic", "pydantic-settings", "asyncpg", "pgvector", "numpy", "scikit-learn"]
+services = ["supabase", "anthropic", "openai"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/icp"
+auth_required = false
+
+[module.database]
+schema = "icp_intelligence"
+tables = ["icp_intelligence.profiles", "icp_intelligence.signals", "icp_intelligence.clusters", "icp_intelligence.cluster_signals", "icp_intelligence.pipeline_runs", "icp_intelligence.config"]
+requires_rls = true
+
+[ai]
+use_when = "Need to extract ICP (Ideal Customer Profile) signals from call transcripts or enriched beta applications, route them to existing profiles by embedding similarity, detect emerging clusters from outlier signals, and surface patterns for human review"
+input_summary = "Webhook payload with source_type ('call_transcript' or 'beta_application') and source_id (UUID), plus raw content (transcript, summary, enrichment data)"
+output_summary = "Extracted signals stored in icp_intelligence.signals with routing_status (auto_routed, review_required, outlier), optional cluster assignments, Slack notifications for review queue items, and dashboard metrics"
+complexity = "high"
+estimated_setup_minutes = 20
+related_modules = ["stakeholder_enrichment", "meeting_intelligence"]
+
+[health]
+last_validated = "2026-02-13"
+test_coverage = 0
+known_issues = []
