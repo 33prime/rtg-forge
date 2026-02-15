@@ -26,7 +26,84 @@ input_summary = "Webhook payload with source_type ('call_transcript' or 'beta_ap
 output_summary = "Extracted signals stored in icp_intelligence.signals with routing_status (auto_routed, review_required, outlier), optional cluster assignments, Slack notifications for review queue items, and dashboard metrics"
 complexity = "high"
 estimated_setup_minutes = 20
-related_modules = ["stakeholder_enrichment", "meeting_intelligence"]
+
+[[ai.decisions.required]]
+key = "signal_sources"
+label = "Where customer signals come from"
+technical = "source_types"
+examples = ["Sales call transcripts", "Application forms", "Support tickets", "Product usage data"]
+
+[[ai.decisions.required]]
+key = "icp_definition"
+label = "What makes an ideal customer for your business"
+technical = "icp_profiles"
+examples = ["We have defined ICP profiles already", "We know roughly but haven't formalized it", "We want the system to discover patterns from our data"]
+
+[[ai.decisions.required]]
+key = "routing_strategy"
+label = "How to handle signals that match known profiles vs. new patterns"
+technical = "routing_mode"
+examples = ["Auto-route strong matches, queue weak ones for review", "Always require human review", "Auto-route everything and flag outliers"]
+
+[[ai.decisions.required]]
+key = "review_workflow"
+label = "How the team reviews and acts on extracted signals"
+technical = "review_channel"
+examples = ["Slack channel for the sales team", "Dashboard with approval workflow", "Weekly digest email"]
+
+[[ai.companions.backend]]
+module = "stakeholder_enrichment"
+relationship = "shares_data"
+pitch = "Enrich the people behind the signals with LinkedIn and company data for deeper context"
+
+[[ai.companions.backend]]
+module = "call_intelligence"
+relationship = "consumes_output"
+pitch = "Feed call analysis results directly into signal extraction for automatic ICP detection"
+
+[[ai.companions.frontend_views]]
+name = "Signal Dashboard"
+description = "List of extracted signals with source, routing status, matched profile, and confidence"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "ICP Profile Manager"
+description = "Create, edit, and view ideal customer profiles with defining attributes"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Cluster Explorer"
+description = "Visualize emerging signal clusters that don't match existing profiles"
+priority = "nice-to-have"
+
+[[ai.companions.frontend_views]]
+name = "Review Queue"
+description = "Signals pending human review with approve/reject/reclassify actions"
+priority = "required"
+
+[[ai.companions.frontend_components]]
+name = "SignalCard"
+description = "Single extracted signal with source context, matched profile, and confidence score"
+
+[[ai.companions.frontend_components]]
+name = "RoutingStatusBadge"
+description = "Shows auto-routed, review-required, or outlier status with color coding"
+
+[[ai.companions.frontend_components]]
+name = "ClusterMap"
+description = "Visual grouping of related outlier signals suggesting a new ICP pattern"
+
+[[ai.companions.frontend_hooks]]
+name = "useSignals"
+description = "List signals with filtering by source, status, profile match, and date range"
+
+[[ai.companions.frontend_hooks]]
+name = "useICPProfiles"
+description = "List and manage ICP profile definitions"
+
+[[ai.companions.frontend_hooks]]
+name = "useReviewQueue"
+description = "Signals pending review with actions to approve, reject, or reclassify"
 
 [health]
 last_validated = "2026-02-13"

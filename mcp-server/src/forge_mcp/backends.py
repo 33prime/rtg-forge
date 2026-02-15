@@ -539,6 +539,13 @@ class SupabaseBackend(ForgeBackend):
                 "complexity": row.get("ai_complexity", "medium"),
                 "estimated_setup_minutes": row.get("ai_estimated_setup_minutes", 15),
                 "related_modules": row.get("ai_related_modules", []),
+                "decisions": {"required": row.get("ai_decisions", [])},
+                "companions": {
+                    "backend": row.get("ai_companions_backend", []),
+                    "frontend_views": row.get("ai_companions_frontend_views", []),
+                    "frontend_components": row.get("ai_companions_frontend_components", []),
+                    "frontend_hooks": row.get("ai_companions_frontend_hooks", []),
+                },
             },
             "health": {
                 "last_validated": row.get("health_last_validated", ""),

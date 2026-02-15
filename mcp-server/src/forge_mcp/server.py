@@ -118,6 +118,44 @@ def get_module(name: str, profile: str = "rtg-default") -> str:
         lines.append(f"- **Complexity:** {ai.get('complexity', 'N/A')}")
         lines.append(f"- **Setup time:** ~{ai.get('estimated_setup_minutes', '?')} min")
 
+    # Decision slots
+    decisions = ai.get("decisions", {}).get("required", [])
+    if decisions:
+        lines.append("\n## Decisions Required")
+        lines.append("_Decision slots that must be resolved before implementation. Labels are client-facing._\n")
+        for d in decisions:
+            examples = ", ".join(d.get("examples", []))
+            lines.append(f"- **{d.get('label', d.get('key', '?'))}** (`{d.get('key', '?')}` → `{d.get('technical', '?')}`)")
+            if examples:
+                lines.append(f"  Examples: {examples}")
+
+    # Companion modules
+    companions = ai.get("companions", {})
+    backend_companions = companions.get("backend", [])
+    if backend_companions:
+        lines.append("\n## Companion Modules")
+        for c in backend_companions:
+            lines.append(f"- **{c.get('module', '?')}** ({c.get('relationship', '?')}) — {c.get('pitch', '')}")
+
+    # Frontend surfaces
+    frontend_views = companions.get("frontend_views", [])
+    frontend_components = companions.get("frontend_components", [])
+    frontend_hooks = companions.get("frontend_hooks", [])
+    if frontend_views or frontend_components or frontend_hooks:
+        lines.append("\n## Frontend Surfaces")
+        if frontend_views:
+            lines.append("\n### Views")
+            for v in frontend_views:
+                lines.append(f"- **{v.get('name', '?')}** [{v.get('priority', 'required')}] — {v.get('description', '')}")
+        if frontend_components:
+            lines.append("\n### Components")
+            for c in frontend_components:
+                lines.append(f"- **{c.get('name', '?')}** — {c.get('description', '')}")
+        if frontend_hooks:
+            lines.append("\n### Data Hooks")
+            for h in frontend_hooks:
+                lines.append(f"- **{h.get('name', '?')}** — {h.get('description', '')}")
+
     # Append MODULE.md content
     md_content = _backend.get_module_md(name)
     if md_content:

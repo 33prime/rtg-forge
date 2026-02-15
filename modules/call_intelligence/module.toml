@@ -34,7 +34,105 @@ input_summary = "meeting_url (string) to schedule a recording bot, or call_recor
 output_summary = "call_recordings row with status machine (pending→bot_scheduled→recording→transcribing→analyzing→complete), call_transcripts with speaker-diarized segments, call_analyses with engagement score, talk ratio, timeline, executive summary, and custom dimensions. Child tables: feature insights with reactions/aha moments, signals with intensity scores, coaching moments with suggestions, content nuggets, and competitive mentions."
 complexity = "high"
 estimated_setup_minutes = 20
-related_modules = ["stakeholder_enrichment", "icp_signal_extraction"]
+
+[[ai.decisions.required]]
+key = "recording_method"
+label = "How calls get recorded"
+technical = "transcript_provider"
+examples = ["Bot joins video calls automatically", "Upload audio files", "Transcripts come from another system"]
+
+[[ai.decisions.required]]
+key = "call_platforms"
+label = "What video platforms the team uses"
+technical = "supported_platforms"
+examples = ["Google Meet", "Zoom", "Microsoft Teams", "Mix of platforms"]
+
+[[ai.decisions.required]]
+key = "analysis_focus"
+label = "What you want to learn from calls"
+technical = "dimension_packs"
+examples = ["Is the sales process being followed", "How do customers feel about the product", "What action items came up", "Track competitive mentions"]
+
+[[ai.decisions.required]]
+key = "custom_dimensions"
+label = "Any company-specific things to track"
+technical = "custom_dimensions"
+examples = ["Deal stage progression", "Product feature reactions", "Objection handling quality"]
+
+[[ai.decisions.required]]
+key = "results_destination"
+label = "Where analysis results should appear"
+technical = "notification_target"
+examples = ["Slack channel", "Email digest", "Dashboard only", "Webhook to CRM"]
+
+[[ai.decisions.required]]
+key = "context_sources"
+label = "What background info to inject into analysis"
+technical = "context_blocks"
+examples = ["CRM deal data", "Customer profile", "Product feature list", "Previous call history"]
+
+[[ai.companions.backend]]
+module = "icp_signal_extraction"
+relationship = "consumes_output"
+pitch = "Automatically identify ideal customer signals from every analyzed call"
+
+[[ai.companions.backend]]
+module = "stakeholder_enrichment"
+relationship = "enriches_context"
+pitch = "Enrich call participants with LinkedIn and company data before analysis"
+
+[[ai.companions.frontend_views]]
+name = "Call Dashboard"
+description = "Grid of recent calls with status, duration, key metrics, and analysis score"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Call Detail"
+description = "Single call view with transcript, speaker timeline, and dimension-by-dimension analysis"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Analysis Settings"
+description = "Configure which dimensions to analyze, manage custom dimension packs"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Recording Setup"
+description = "Connect calendar, authorize recording bot, manage recording preferences"
+priority = "setup"
+
+[[ai.companions.frontend_views]]
+name = "Team Analytics"
+description = "Aggregate scores across reps over time, trend lines, coaching insights"
+priority = "nice-to-have"
+
+[[ai.companions.frontend_components]]
+name = "CallStatusBadge"
+description = "Shows recording/transcribing/analyzing/complete state with progress"
+
+[[ai.companions.frontend_components]]
+name = "DimensionScoreCard"
+description = "Single analysis dimension with score, evidence quotes, and assessment"
+
+[[ai.companions.frontend_components]]
+name = "TranscriptViewer"
+description = "Timestamped transcript with speaker labels, search, and highlight anchoring"
+
+[[ai.companions.frontend_components]]
+name = "EngagementTimeline"
+description = "Visual timeline showing talk ratio, energy, and key moments across the call"
+
+[[ai.companions.frontend_hooks]]
+name = "useCalls"
+description = "List calls with filtering by date, status, participant, and analysis score"
+
+[[ai.companions.frontend_hooks]]
+name = "useCallAnalysis"
+description = "Full analysis for a single call including all dimension results"
+
+[[ai.companions.frontend_hooks]]
+name = "useCallTranscript"
+description = "Speaker-diarized transcript segments for a single call"
 
 [health]
 last_validated = "2026-02-15"

@@ -18,8 +18,52 @@ The machine-readable manifest that declares the module's identity, dependencies,
 | `[module.dependencies]` | Python packages, external services, and other RTG modules this depends on |
 | `[module.api]` | URL prefix and auth requirements |
 | `[module.database]` | Table names and RLS requirements |
-| `[ai]` | When to use this module, input/output summaries, complexity, setup time, related modules |
+| `[ai]` | When to use this module, input/output summaries, complexity, setup time |
+| `[ai.decisions]` | Decision slots that must be resolved before implementation (client-facing labels + technical keys) |
+| `[ai.companions]` | Related backend modules with client-facing pitch, plus frontend views/components/hooks needed |
 | `[health]` | Last validated date, test coverage percentage, known issues |
+
+#### `[ai.decisions]` -- Decision Slots
+
+Declares the decisions that MUST be resolved before a module can be implemented in a target project. These are NOT hardcoded interview questions — they are decision slots that Claude fills through natural, creative conversation. Labels and examples use client-facing language (non-technical) so the requirements engine can present them to stakeholders.
+
+```toml
+[[ai.decisions.required]]
+key = "recording_method"                    # Internal key for the decision
+label = "How calls get recorded"            # Client-facing, plain English
+technical = "transcript_provider"           # Maps to config/code variable
+examples = [                                # Plain-language options (not exhaustive)
+    "Bot joins video calls automatically",
+    "Upload audio files",
+    "Paste transcripts manually",
+]
+```
+
+After implementation, the `/use-module` skill writes a `decisions.toml` into the target project documenting what was actually chosen and why. This captured data feeds back into the requirements engine to improve future recommendations.
+
+#### `[ai.companions]` -- Related Modules & Frontend Surfaces
+
+Declares backend modules that complement this one (with client-facing pitches), and the frontend views, components, and data hooks needed to make the module usable. Frontend companions are NOT code — they are a manifest for scoping and planning.
+
+```toml
+[[ai.companions.backend]]
+module = "icp_signal_extraction"
+relationship = "consumes_output"            # consumes_output | enriches_context | shares_data | prerequisite
+pitch = "Automatically identify ideal customer signals from every analyzed call"
+
+[[ai.companions.frontend_views]]
+name = "Call Dashboard"
+description = "Grid of recent calls with status, duration, and analysis score"
+priority = "required"                       # required | setup | nice-to-have
+
+[[ai.companions.frontend_components]]
+name = "DimensionScoreCard"
+description = "Single analysis dimension with score, evidence quotes, and assessment"
+
+[[ai.companions.frontend_hooks]]
+name = "useCalls"
+description = "List calls with filtering by date, status, participant"
+```
 
 ### 2. `MODULE.md` -- Human + AI Documentation
 
@@ -196,3 +240,5 @@ def register_module(module_path: str, app: FastAPI):
 4. **Error handling**: Raise domain exceptions in `service.py`; convert to HTTP errors in `router.py`.
 5. **Database**: All tables are prefixed implicitly by their module context. Use RLS on every table.
 6. **AI metadata**: The `[ai]` section in `module.toml` helps AI agents decide when and how to use the module.
+7. **Decision slots**: The `[ai.decisions]` section declares what must be decided before implementation — not questions to ask, but decision slots Claude fills through natural conversation.
+8. **Companions**: The `[ai.companions]` section declares related backend modules and required frontend surfaces so the requirements engine can recommend modules and scope UI work.

@@ -25,7 +25,79 @@ input_summary = "beta_application_id (UUID) referencing a beta_applications row 
 output_summary = "enrichment_profiles row with PDL/BrightData/Firecrawl raw data, Claude consultant assessment (practice_maturity, ai_readiness, seniority_tier, etc.), psychographic + sales intel, ICP pre-score (0-100 with fit_category), and up to 3 personalized demo project ideas"
 complexity = "high"
 estimated_setup_minutes = 30
-related_modules = ["icp_signal_extraction", "meeting_intelligence"]
+
+[[ai.decisions.required]]
+key = "enrichment_sources"
+label = "Where to pull background info on people"
+technical = "data_providers"
+examples = ["LinkedIn profiles", "Company websites", "Public data APIs", "Internal CRM data"]
+
+[[ai.decisions.required]]
+key = "enrichment_trigger"
+label = "When enrichment should happen"
+technical = "trigger_mechanism"
+examples = ["When someone submits an application", "When a new contact is added to CRM", "On demand from a dashboard", "Before a scheduled meeting"]
+
+[[ai.decisions.required]]
+key = "assessment_criteria"
+label = "How to evaluate if someone is a good fit"
+technical = "icp_scoring_dimensions"
+examples = ["Company size and industry", "Role seniority and decision-making authority", "Technology maturity", "Budget signals"]
+
+[[ai.decisions.required]]
+key = "output_usage"
+label = "What happens with the enriched profile"
+technical = "output_destination"
+examples = ["Sales team reviews before outreach", "Auto-score and route to right rep", "Generate personalized demo ideas", "Feed into meeting prep"]
+
+[[ai.companions.backend]]
+module = "icp_signal_extraction"
+relationship = "shares_data"
+pitch = "Route enriched profiles into ICP signal detection to find patterns across your pipeline"
+
+[[ai.companions.backend]]
+module = "call_intelligence"
+relationship = "enriches_context"
+pitch = "Inject enrichment data into call analysis so the AI knows who's on the call"
+
+[[ai.companions.frontend_views]]
+name = "Enrichment Dashboard"
+description = "List of enriched profiles with ICP scores, fit categories, and enrichment status"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Profile Detail"
+description = "Full enriched profile with company info, assessment, psychographics, and demo ideas"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "ICP Configuration"
+description = "Define and edit ideal customer profile criteria and scoring weights"
+priority = "setup"
+
+[[ai.companions.frontend_components]]
+name = "ICPScoreBadge"
+description = "Color-coded score (0-100) with fit category label (strong/moderate/weak)"
+
+[[ai.companions.frontend_components]]
+name = "AssessmentCard"
+description = "AI-generated consultant assessment with practice maturity, AI readiness, seniority"
+
+[[ai.companions.frontend_components]]
+name = "DemoIdeaCard"
+description = "Personalized demo project idea with rationale and complexity estimate"
+
+[[ai.companions.frontend_hooks]]
+name = "useEnrichmentProfiles"
+description = "List enriched profiles with filtering by score, status, and fit category"
+
+[[ai.companions.frontend_hooks]]
+name = "useEnrichmentDetail"
+description = "Full enrichment data for a single profile including raw sources and AI synthesis"
+
+[[ai.companions.frontend_hooks]]
+name = "useTriggerEnrichment"
+description = "Trigger enrichment pipeline for a given application or contact ID"
 
 [health]
 last_validated = "2026-02-11"

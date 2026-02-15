@@ -25,7 +25,72 @@ input_summary = "Entity ID + raw data dict (from gatherers) + optional mode. Eng
 output_summary = "Assembled text (curated prompt section for the LLM) + full Manifest showing every block considered, its priority score, signals that influenced scoring, and whether it was included or excluded with reasons."
 complexity = "high"
 estimated_setup_minutes = 30
-related_modules = ["codebase_analyzer"]
+
+[[ai.decisions.required]]
+key = "domain"
+label = "What kind of application this powers"
+technical = "domain_context"
+examples = ["Coaching or mentoring app", "CRM with AI assistant", "Healthcare companion", "Educational tutor", "Customer support agent"]
+
+[[ai.decisions.required]]
+key = "entity_type"
+label = "Who the system builds knowledge about"
+technical = "entity_model"
+examples = ["Individual users over time", "Companies and their teams", "Students and their progress", "Patients and their history"]
+
+[[ai.decisions.required]]
+key = "context_sources"
+label = "Where the system gets information to remember"
+technical = "gatherer_sources"
+examples = ["User conversations", "Form submissions", "CRM data", "Usage analytics", "External API data"]
+
+[[ai.decisions.required]]
+key = "memory_strategy"
+label = "How long and what the system should remember"
+technical = "memory_persistence"
+examples = ["Everything forever", "Last 90 days of interactions", "Key facts only, forget details", "User controls what's remembered"]
+
+[[ai.decisions.required]]
+key = "budget_constraints"
+label = "How much context the AI can use per request"
+technical = "token_budget"
+examples = ["Keep it minimal for speed", "Use as much as needed for quality", "Vary by request type"]
+
+[[ai.companions.backend]]
+module = "codebase_analyzer"
+relationship = "shares_data"
+pitch = "Feed codebase context into the assembly engine so your AI assistant understands the project it's working on"
+
+[[ai.companions.frontend_views]]
+name = "Context Inspector"
+description = "Debug view showing what context blocks were assembled, their scores, and include/exclude reasons"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Memory Browser"
+description = "Browse and manage stored memories for an entity — what the system knows and remembers"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Goal Configuration"
+description = "Define and edit system goals that drive context prioritization"
+priority = "setup"
+
+[[ai.companions.frontend_components]]
+name = "ContextManifest"
+description = "Expandable view of an assembly manifest showing blocks, scores, and budget usage"
+
+[[ai.companions.frontend_components]]
+name = "MemoryTimeline"
+description = "Chronological view of memories for an entity with type labels and decay indicators"
+
+[[ai.companions.frontend_hooks]]
+name = "useContextManifest"
+description = "Fetch the latest assembly manifest for an entity showing what context was included"
+
+[[ai.companions.frontend_hooks]]
+name = "useMemories"
+description = "List and manage memories for an entity with filtering by type and recency"
 
 [health]
 last_validated = "2026-02-13"

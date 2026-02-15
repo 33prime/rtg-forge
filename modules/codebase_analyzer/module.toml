@@ -25,7 +25,61 @@ input_summary = "No request body for GET (returns current context). POST /refres
 output_summary = "Structured markdown document with 8 sections: Architecture, File Registry, Admin Sections, Data Model, DB Constraints, Patterns, Feature Checklist, Environment. Stored in codebase_context table with status tracking (current/stale/generating)."
 complexity = "medium"
 estimated_setup_minutes = 10
-related_modules = ["feedback_to_instructions"]
+
+[[ai.decisions.required]]
+key = "repo_source"
+label = "Where the codebase lives"
+technical = "github_config"
+examples = ["Public GitHub repo", "Private GitHub repo with access token", "GitHub organization with multiple repos"]
+
+[[ai.decisions.required]]
+key = "analysis_scope"
+label = "What parts of the codebase to analyze"
+technical = "analysis_paths"
+examples = ["Entire repo", "Backend only", "Specific directories", "Only files changed since last analysis"]
+
+[[ai.decisions.required]]
+key = "refresh_strategy"
+label = "How often the analysis should update"
+technical = "refresh_mode"
+examples = ["On demand when someone requests it", "After every deploy", "On a schedule (daily/weekly)", "When specific files change"]
+
+[[ai.decisions.required]]
+key = "output_usage"
+label = "What the codebase analysis is used for"
+technical = "output_consumers"
+examples = ["Generate CLAUDE.md instructions for AI coding", "Onboard new developers", "Feed into context assembly for AI features", "Documentation generation"]
+
+[[ai.companions.backend]]
+module = "context_assembly_engine"
+relationship = "shares_data"
+pitch = "Feed codebase structure into context assembly so AI features understand the project they live in"
+
+[[ai.companions.frontend_views]]
+name = "Codebase Overview"
+description = "Current analysis status, last refresh date, and structured context document"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Refresh Controls"
+description = "Trigger full or incremental analysis, view refresh history and status"
+priority = "required"
+
+[[ai.companions.frontend_components]]
+name = "AnalysisStatusBadge"
+description = "Shows current/stale/generating status with last refresh timestamp"
+
+[[ai.companions.frontend_components]]
+name = "ContextDocViewer"
+description = "Rendered markdown view of the structured codebase context document"
+
+[[ai.companions.frontend_hooks]]
+name = "useCodebaseContext"
+description = "Fetch current codebase context document with status metadata"
+
+[[ai.companions.frontend_hooks]]
+name = "useRefreshAnalysis"
+description = "Trigger full or incremental codebase analysis refresh"
 
 [health]
 last_validated = "2026-02-11"

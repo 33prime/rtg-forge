@@ -119,8 +119,11 @@ def _collect_source_files(mod_dir: Path) -> dict[str, str]:
         if sub.is_dir():
             for f in sorted(sub.rglob("*")):
                 if f.is_file():
-                    rel = str(f.relative_to(mod_dir))
-                    files[rel] = f.read_text(encoding="utf-8")
+                    try:
+                        rel = str(f.relative_to(mod_dir))
+                        files[rel] = f.read_text(encoding="utf-8")
+                    except UnicodeDecodeError:
+                        pass  # Skip binary files
     return files
 
 
@@ -170,6 +173,11 @@ def sync_modules(forge_root: Path, client: Client) -> int:
             "ai_complexity": ai.get("complexity", "medium"),
             "ai_estimated_setup_minutes": ai.get("estimated_setup_minutes", 15),
             "ai_related_modules": ai.get("related_modules", []),
+            "ai_decisions": ai.get("decisions", {}).get("required", []),
+            "ai_companions_backend": ai.get("companions", {}).get("backend", []),
+            "ai_companions_frontend_views": ai.get("companions", {}).get("frontend_views", []),
+            "ai_companions_frontend_components": ai.get("companions", {}).get("frontend_components", []),
+            "ai_companions_frontend_hooks": ai.get("companions", {}).get("frontend_hooks", []),
             "health_last_validated": health.get("last_validated", ""),
             "health_test_coverage": health.get("test_coverage", 0),
             "health_known_issues": health.get("known_issues", []),
