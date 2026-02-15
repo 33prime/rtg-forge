@@ -1,0 +1,92 @@
+[module]
+name = "api_keys"
+version = "0.1.0"
+description = "API key generation, rotation, scoping, rate limiting, and usage tracking for external integrations"
+status = "stub"
+category = "infrastructure"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/api-keys"
+auth_required = true
+
+[module.database]
+tables = ["api_keys", "api_key_usage"]
+requires_rls = true
+
+[ai]
+use_when = "Any application that exposes an API to external consumers — third-party integrations, Zapier connections, partner APIs, or programmatic access. Handles key generation, scope-based permissions, rate limiting, usage tracking, and rotation."
+input_summary = "Key creation with name, scopes, and optional expiration. API requests authenticated via X-API-Key or Bearer header."
+output_summary = "API key records with hashed secret, scope list, rate limit config, usage counters, last used timestamp, and rotation history."
+complexity = "medium"
+estimated_setup_minutes = 10
+
+[[ai.decisions.required]]
+key = "scope_model"
+label = "What level of control each API key has"
+technical = "scope_granularity"
+examples = ["Full access (single scope)", "Read/write scopes per resource", "Custom permission sets", "Scoped to specific endpoints"]
+
+[[ai.decisions.required]]
+key = "rate_limiting"
+label = "How API usage is throttled"
+technical = "rate_limit_config"
+examples = ["No rate limiting", "Global limit per key (e.g., 1000 req/hour)", "Per-endpoint limits", "Tiered limits based on plan"]
+
+[[ai.decisions.required]]
+key = "key_lifecycle"
+label = "How API keys expire and rotate"
+technical = "expiration_policy"
+examples = ["Never expire", "Expire after 90 days", "Manual rotation only", "Auto-rotate with grace period"]
+
+[[ai.decisions.required]]
+key = "usage_tracking"
+label = "How API key usage is monitored"
+technical = "usage_logging"
+examples = ["Count requests only", "Log every request with endpoint and response code", "Aggregate daily usage stats", "No tracking"]
+
+[[ai.companions.backend]]
+module = "audit_trail"
+relationship = "consumes_output"
+pitch = "Log all API key creation, rotation, and revocation events"
+
+[[ai.companions.backend]]
+module = "team_management"
+relationship = "enriches_context"
+pitch = "Scope API keys to specific organizations and track which team member created them"
+
+[[ai.companions.frontend_views]]
+name = "API Keys"
+description = "List of API keys with name, scopes, last used, and creation date — with create, rotate, and revoke actions"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "API Usage"
+description = "Usage charts per key showing request volume, error rates, and top endpoints"
+priority = "nice-to-have"
+
+[[ai.companions.frontend_components]]
+name = "ApiKeyReveal"
+description = "Masked key display with copy button — shown only once on creation"
+
+[[ai.companions.frontend_components]]
+name = "ScopeSelector"
+description = "Multi-select for choosing API key permissions from available scopes"
+
+[[ai.companions.frontend_hooks]]
+name = "useApiKeys"
+description = "List, create, rotate, and revoke API keys for the current organization"
+
+[[ai.companions.frontend_hooks]]
+name = "useApiKeyUsage"
+description = "Usage statistics for a specific API key over a date range"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []

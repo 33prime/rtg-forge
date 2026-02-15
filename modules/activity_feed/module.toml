@@ -1,0 +1,92 @@
+[module]
+name = "activity_feed"
+version = "0.1.0"
+description = "Chronological event stream for entities with aggregation, filtering, and real-time updates via Supabase Realtime"
+status = "stub"
+category = "operational"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/activity"
+auth_required = true
+
+[module.database]
+tables = ["activity_events"]
+requires_rls = true
+
+[ai]
+use_when = "Any application where users need to see what happened on a resource over time — deal timelines, project history, account activity, team updates. Provides a structured event stream with actor, action, target, and metadata, queryable by entity or globally."
+input_summary = "Activity event with actor_id, action verb, target_type, target_id, and optional metadata (description, before/after values, related entities)."
+output_summary = "Chronological activity feed queryable by entity (show me everything on this deal), actor (show me everything this person did), or globally (show me all recent activity). Supports aggregation (collapse 5 edits into 'made 5 changes')."
+complexity = "low"
+estimated_setup_minutes = 10
+
+[[ai.decisions.required]]
+key = "event_sources"
+label = "What actions show up in the activity feed"
+technical = "tracked_events"
+examples = ["Only explicit user actions (create, update, comment)", "All data changes including automated ones", "Configurable per entity type", "User actions plus system events (emails sent, jobs completed)"]
+
+[[ai.decisions.required]]
+key = "aggregation"
+label = "Should repeated similar events be collapsed"
+technical = "aggregation_rules"
+examples = ["No aggregation, show every event", "Collapse repeated edits within 5 minutes", "Group by actor and time window", "Smart grouping by event type"]
+
+[[ai.decisions.required]]
+key = "feed_scope"
+label = "What feeds are available"
+technical = "feed_types"
+examples = ["Per-entity only (deal timeline)", "Per-entity and global (all recent activity)", "Per-entity, per-actor, and global", "Per-entity with team/org filtering"]
+
+[[ai.decisions.required]]
+key = "realtime"
+label = "Should the feed update in real-time"
+technical = "realtime_mode"
+examples = ["Polling on page load only", "Real-time via Supabase Realtime", "Real-time with new event toast notifications", "Polling with manual refresh"]
+
+[[ai.companions.backend]]
+module = "audit_trail"
+relationship = "shares_data"
+pitch = "Activity feed shows user-facing events; audit trail captures everything for compliance. Same events, different audiences."
+
+[[ai.companions.backend]]
+module = "notification_dispatch"
+relationship = "consumes_output"
+pitch = "Trigger notifications from activity events — notify deal owner when a comment is added"
+
+[[ai.companions.frontend_views]]
+name = "Activity Timeline"
+description = "Chronological list of events for an entity with actor avatars, action descriptions, and timestamps"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Global Activity Feed"
+description = "Organization-wide recent activity with filtering by entity type and actor"
+priority = "nice-to-have"
+
+[[ai.companions.frontend_components]]
+name = "ActivityItem"
+description = "Single event row with actor avatar, action verb, target link, and relative timestamp"
+
+[[ai.companions.frontend_components]]
+name = "ActivityGroup"
+description = "Collapsed group of similar events with expand/collapse toggle"
+
+[[ai.companions.frontend_hooks]]
+name = "useActivityFeed"
+description = "Activity events for an entity with pagination and optional real-time subscription"
+
+[[ai.companions.frontend_hooks]]
+name = "useGlobalActivity"
+description = "Organization-wide activity feed with filtering by type and actor"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []

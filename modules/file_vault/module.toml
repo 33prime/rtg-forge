@@ -1,0 +1,82 @@
+[module]
+name = "file_vault"
+version = "0.1.0"
+description = "File upload, storage metadata tracking, access control, and presigned URL management on top of Supabase Storage"
+status = "stub"
+category = "infrastructure"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/files"
+auth_required = true
+
+[module.database]
+tables = ["file_metadata", "file_access_log"]
+requires_rls = true
+
+[ai]
+use_when = "Any application that needs file uploads — documents, images, attachments. Wraps Supabase Storage with a metadata tracking layer, access control via RLS, file type validation, and optional image processing."
+input_summary = "File upload via multipart form with optional metadata (entity_type, entity_id, tags). File ID for retrieval and presigned URL generation."
+output_summary = "File metadata row with storage path, MIME type, size, checksum, uploader, and linked entity. Presigned download URLs with configurable expiration."
+complexity = "low"
+estimated_setup_minutes = 10
+
+[[ai.decisions.required]]
+key = "storage_structure"
+label = "How files are organized in storage"
+technical = "bucket_strategy"
+examples = ["Single bucket with path prefixes", "Separate bucket per entity type", "Bucket per organization"]
+
+[[ai.decisions.required]]
+key = "access_model"
+label = "Who can see uploaded files"
+technical = "access_control"
+examples = ["Uploader only", "Anyone in the same organization", "Public with link", "Custom per-file permissions"]
+
+[[ai.decisions.required]]
+key = "file_restrictions"
+label = "What types and sizes of files are allowed"
+technical = "upload_constraints"
+examples = ["Images only (max 10MB)", "Documents and images (max 50MB)", "Any file type (max 100MB)", "Custom rules per entity type"]
+
+[[ai.decisions.required]]
+key = "image_processing"
+label = "Should uploaded images be processed"
+technical = "image_pipeline"
+examples = ["No processing", "Generate thumbnails", "Resize to max dimensions", "Multiple sizes (thumbnail, medium, full)"]
+
+[[ai.companions.backend]]
+module = "audit_trail"
+relationship = "consumes_output"
+pitch = "Track file uploads, downloads, and access for compliance"
+
+[[ai.companions.frontend_views]]
+name = "File Browser"
+description = "Grid or list view of uploaded files with thumbnails, filtering by type, and bulk actions"
+priority = "nice-to-have"
+
+[[ai.companions.frontend_components]]
+name = "FileUploader"
+description = "Drag-and-drop upload zone with progress bar, type validation, and size limits"
+
+[[ai.companions.frontend_components]]
+name = "FilePreview"
+description = "Inline preview for images and documents with download button"
+
+[[ai.companions.frontend_hooks]]
+name = "useFileUpload"
+description = "Upload file with progress tracking, returns file metadata on completion"
+
+[[ai.companions.frontend_hooks]]
+name = "useFiles"
+description = "List files for an entity with filtering, pagination, and presigned URL resolution"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []

@@ -1,0 +1,92 @@
+[module]
+name = "audit_trail"
+version = "0.1.0"
+description = "Immutable append-only audit log tracking who did what, when, and on which resource — for compliance, debugging, and accountability"
+status = "stub"
+category = "infrastructure"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/audit"
+auth_required = true
+
+[module.database]
+tables = ["audit_events"]
+requires_rls = true
+
+[ai]
+use_when = "Any B2B application that needs accountability, compliance, or debugging visibility. Records every meaningful action (create, update, delete, access) with actor, timestamp, resource, and before/after snapshots. Immutable — no updates or deletes on the audit table."
+input_summary = "Audit event with actor_id, action (create/update/delete/access), resource_type, resource_id, and optional metadata (before/after snapshots, IP address, user agent)."
+output_summary = "Append-only audit_events rows queryable by actor, resource, action, and time range. Supports export for compliance reporting."
+complexity = "low"
+estimated_setup_minutes = 10
+
+[[ai.decisions.required]]
+key = "tracked_actions"
+label = "What actions get recorded in the audit log"
+technical = "action_scope"
+examples = ["All create/update/delete operations", "Only sensitive operations (role changes, data exports, settings)", "Everything including read access"]
+
+[[ai.decisions.required]]
+key = "snapshot_depth"
+label = "How much detail to capture about each change"
+technical = "snapshot_mode"
+examples = ["Action and resource ID only", "Before and after values for changed fields", "Full resource snapshot on every change"]
+
+[[ai.decisions.required]]
+key = "retention_policy"
+label = "How long audit records are kept"
+technical = "retention_days"
+examples = ["Forever (compliance requirement)", "1 year then archive to cold storage", "90 days then delete"]
+
+[[ai.decisions.required]]
+key = "export_format"
+label = "How audit data is exported for compliance"
+technical = "export_options"
+examples = ["CSV download", "JSON API with pagination", "Scheduled report to email", "No export needed"]
+
+[[ai.companions.backend]]
+module = "team_management"
+relationship = "enriches_context"
+pitch = "Resolve actor names and roles in audit entries instead of showing raw user IDs"
+
+[[ai.companions.backend]]
+module = "data_export"
+relationship = "consumes_output"
+pitch = "Export audit logs in bulk for compliance audits and regulatory reporting"
+
+[[ai.companions.frontend_views]]
+name = "Audit Log"
+description = "Searchable, filterable timeline of all audit events with actor, action, resource, and timestamp"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Resource History"
+description = "Audit trail for a single resource showing all changes over time with diffs"
+priority = "nice-to-have"
+
+[[ai.companions.frontend_components]]
+name = "AuditEventRow"
+description = "Single audit entry with actor avatar, action verb, resource link, and relative timestamp"
+
+[[ai.companions.frontend_components]]
+name = "ChangeDiff"
+description = "Side-by-side or inline diff view showing before/after values for an update event"
+
+[[ai.companions.frontend_hooks]]
+name = "useAuditLog"
+description = "List audit events with filtering by actor, action, resource type, and date range"
+
+[[ai.companions.frontend_hooks]]
+name = "useResourceHistory"
+description = "Audit trail for a specific resource ID showing all actions in chronological order"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []

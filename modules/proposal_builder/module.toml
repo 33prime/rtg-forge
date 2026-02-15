@@ -1,0 +1,126 @@
+[module]
+name = "proposal_builder"
+version = "0.1.0"
+description = "Create, send, and track proposals with line items, pricing options, approval workflows, and conversion to invoices or contracts"
+status = "stub"
+category = "commercial"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings", "httpx"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/proposals"
+auth_required = true
+
+[module.database]
+tables = ["proposals", "proposal_sections", "proposal_line_items", "proposal_versions", "proposal_approvals"]
+requires_rls = true
+
+[ai]
+use_when = "Building a platform where users need to create and send quotes, proposals, or estimates to clients. Handles structured proposals with sections, line items with pricing options, client-facing approval pages, version history, and conversion to invoices on acceptance."
+input_summary = "Proposal creation with client info, sections (rich text blocks), and line items (description, quantity, unit price, optional pricing tiers). Client email for sending. Approval actions (accept/reject/request changes)."
+output_summary = "Proposal records with lifecycle status (draft→sent→viewed→accepted/rejected/revised), version history, line item totals with tax/discount calculations, client-facing shareable link, and conversion trigger to invoice_engine on acceptance."
+complexity = "high"
+estimated_setup_minutes = 25
+
+[[ai.decisions.required]]
+key = "pricing_model"
+label = "How pricing works in proposals"
+technical = "pricing_structure"
+examples = ["Fixed price per line item", "Hourly rate with estimated hours", "Tiered options (client picks a package)", "Mix of fixed and hourly items"]
+
+[[ai.decisions.required]]
+key = "approval_flow"
+label = "How clients approve proposals"
+technical = "approval_process"
+examples = ["Single person accepts or rejects", "Multiple stakeholders must all approve", "Accept with comments or change requests", "Auto-accept after expiration period"]
+
+[[ai.decisions.required]]
+key = "expiration_policy"
+label = "How long proposals stay valid"
+technical = "validity_period"
+examples = ["30 days then expire", "No expiration", "Custom per proposal", "Expire with reminder notification"]
+
+[[ai.decisions.required]]
+key = "on_acceptance"
+label = "What happens when a proposal is accepted"
+technical = "acceptance_action"
+examples = ["Automatically generate an invoice", "Notify sales team for manual follow-up", "Generate contract for e-signature", "Create project in project management"]
+
+[[ai.decisions.required]]
+key = "template_system"
+label = "Can proposals be created from reusable templates"
+technical = "template_support"
+examples = ["No templates, always start fresh", "Saveable templates with default sections and items", "Industry-specific starter templates"]
+
+[[ai.companions.backend]]
+module = "invoice_engine"
+relationship = "consumes_output"
+pitch = "Automatically generate invoices from accepted proposals — line items, pricing, and client info carry over"
+
+[[ai.companions.backend]]
+module = "notification_dispatch"
+relationship = "consumes_output"
+pitch = "Notify when proposals are viewed, approaching expiration, or approved/rejected"
+
+[[ai.companions.backend]]
+module = "file_vault"
+relationship = "enriches_context"
+pitch = "Attach files (SOWs, case studies, reference docs) to proposal sections"
+
+[[ai.companions.frontend_views]]
+name = "Proposal List"
+description = "All proposals with status, client, total value, and last activity date"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Proposal Builder"
+description = "Editor with draggable sections, line item table, pricing calculator, and live preview"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Client Approval Page"
+description = "Public-facing proposal view with accept/reject buttons and comment field"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Proposal Templates"
+description = "Manage reusable proposal templates with default sections and line items"
+priority = "setup"
+
+[[ai.companions.frontend_views]]
+name = "Proposal Analytics"
+description = "Win rate, average deal size, time to close, and conversion funnel"
+priority = "nice-to-have"
+
+[[ai.companions.frontend_components]]
+name = "LineItemTable"
+description = "Editable table of line items with quantity, price, discount, and running totals"
+
+[[ai.companions.frontend_components]]
+name = "ProposalStatusBadge"
+description = "Shows draft, sent, viewed, accepted, rejected, or expired with color coding"
+
+[[ai.companions.frontend_components]]
+name = "PricingOptionSelector"
+description = "Client-facing component for choosing between pricing tiers or packages"
+
+[[ai.companions.frontend_hooks]]
+name = "useProposals"
+description = "List proposals with filtering by status, client, and date range"
+
+[[ai.companions.frontend_hooks]]
+name = "useProposalBuilder"
+description = "CRUD for proposal sections and line items with auto-save"
+
+[[ai.companions.frontend_hooks]]
+name = "useProposalApproval"
+description = "Client-facing hook for viewing proposal and submitting approval/rejection"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []

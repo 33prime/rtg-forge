@@ -1,0 +1,86 @@
+[module]
+name = "feature_gates"
+version = "0.1.0"
+description = "Runtime feature flags with per-user, per-org, and percentage-based rollout — DB-backed, no external service dependency"
+status = "stub"
+category = "quality"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/features"
+auth_required = true
+
+[module.database]
+tables = ["feature_flags", "feature_overrides"]
+requires_rls = true
+
+[ai]
+use_when = "Any application that needs to ship code without shipping features — gradual rollouts, A/B testing, beta access, kill switches, plan-based feature gating. DB-backed with in-memory caching, no external service required."
+input_summary = "Flag definition with key, default value, rollout percentage, and targeting rules. Flag evaluation with user_id and org_id context."
+output_summary = "Boolean flag evaluation with resolved source (default, percentage, user override, org override, plan-based). Admin API for flag management with evaluation statistics."
+complexity = "low"
+estimated_setup_minutes = 10
+
+[[ai.decisions.required]]
+key = "evaluation_context"
+label = "What determines if a feature is on or off for someone"
+technical = "targeting_model"
+examples = ["User-level only", "User and organization level", "User, org, and subscription plan", "Percentage-based rollout"]
+
+[[ai.decisions.required]]
+key = "flag_lifecycle"
+label = "How feature flags are managed over time"
+technical = "lifecycle_policy"
+examples = ["Permanent flags (plan-based features)", "Temporary flags (removed after full rollout)", "Mix of both with cleanup reminders", "All temporary with expiration dates"]
+
+[[ai.decisions.required]]
+key = "default_behavior"
+label = "What happens when a flag doesn't exist"
+technical = "missing_flag_policy"
+examples = ["Default to off (safe)", "Default to on (permissive)", "Raise error (strict)", "Configurable per flag"]
+
+[[ai.companions.backend]]
+module = "team_management"
+relationship = "enriches_context"
+pitch = "Gate features by organization plan or user role"
+
+[[ai.companions.backend]]
+module = "audit_trail"
+relationship = "consumes_output"
+pitch = "Track flag changes — who enabled what feature for whom"
+
+[[ai.companions.frontend_views]]
+name = "Feature Flag Dashboard"
+description = "List of all flags with status, rollout percentage, and override counts"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Flag Detail"
+description = "Single flag with targeting rules, override list, and evaluation statistics"
+priority = "nice-to-have"
+
+[[ai.companions.frontend_components]]
+name = "FlagToggle"
+description = "On/off toggle with rollout percentage slider and confirmation dialog"
+
+[[ai.companions.frontend_components]]
+name = "RolloutBar"
+description = "Visual percentage bar showing current rollout coverage"
+
+[[ai.companions.frontend_hooks]]
+name = "useFeatureFlags"
+description = "Evaluate feature flags for the current user with caching"
+
+[[ai.companions.frontend_hooks]]
+name = "useFeatureAdmin"
+description = "List, create, update, and delete feature flags (admin only)"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []

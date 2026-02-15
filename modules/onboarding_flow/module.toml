@@ -1,0 +1,97 @@
+[module]
+name = "onboarding_flow"
+version = "0.1.0"
+description = "Multi-step onboarding wizard with progress tracking, skip logic, completion gating, and first-run experience management"
+status = "stub"
+category = "operational"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/onboarding"
+auth_required = true
+
+[module.database]
+tables = ["onboarding_flows", "onboarding_steps", "onboarding_progress"]
+requires_rls = true
+
+[ai]
+use_when = "Any application where new users or organizations need guided setup — connecting integrations, configuring settings, importing data, inviting team members. Provides a step-by-step wizard with progress persistence, conditional skip logic, and completion gating."
+input_summary = "Flow definition with ordered steps (name, description, required flag, completion criteria). Progress updates with step ID and completion data."
+output_summary = "Per-user/org onboarding progress with step statuses (pending→in_progress→completed→skipped), overall completion percentage, and gating decisions (can user access feature X before completing step Y)."
+complexity = "low"
+estimated_setup_minutes = 10
+
+[[ai.decisions.required]]
+key = "flow_scope"
+label = "Who goes through onboarding"
+technical = "onboarding_scope"
+examples = ["Every new user", "One person per organization (first admin)", "Both user-level and org-level flows", "Role-specific onboarding"]
+
+[[ai.decisions.required]]
+key = "step_flexibility"
+label = "Can users skip or reorder steps"
+technical = "step_policy"
+examples = ["All steps required in order", "Some steps skippable with 'skip for now'", "Any order, just complete all eventually", "Required steps gate access to features"]
+
+[[ai.decisions.required]]
+key = "completion_gating"
+label = "Does incomplete onboarding block access to features"
+technical = "gating_mode"
+examples = ["Full access immediately, onboarding is optional", "Core features gated until critical steps done", "Entire app gated until onboarding complete", "Gentle reminders but no blocking"]
+
+[[ai.decisions.required]]
+key = "revisiting"
+label = "Can users go back to completed steps later"
+technical = "revisit_policy"
+examples = ["Onboarding disappears after completion", "Always accessible from settings", "Accessible but shown as completed", "Reset and redo any step"]
+
+[[ai.companions.backend]]
+module = "team_management"
+relationship = "enriches_context"
+pitch = "Include 'invite team members' as an onboarding step with real invitation flow"
+
+[[ai.companions.backend]]
+module = "notification_dispatch"
+relationship = "consumes_output"
+pitch = "Send nudge emails when users haven't completed onboarding after N days"
+
+[[ai.companions.frontend_views]]
+name = "Onboarding Wizard"
+description = "Step-by-step wizard with progress bar, current step content, and navigation"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Onboarding Checklist"
+description = "Persistent sidebar or banner showing completed and remaining steps"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Flow Designer"
+description = "Admin view for defining onboarding steps, ordering, and requirements"
+priority = "setup"
+
+[[ai.companions.frontend_components]]
+name = "StepProgressBar"
+description = "Horizontal progress indicator showing completed, current, and remaining steps"
+
+[[ai.companions.frontend_components]]
+name = "OnboardingChecklist"
+description = "Compact checklist widget showing step status with links to incomplete steps"
+
+[[ai.companions.frontend_hooks]]
+name = "useOnboardingProgress"
+description = "Current user's onboarding status with step completion and gating decisions"
+
+[[ai.companions.frontend_hooks]]
+name = "useCompleteStep"
+description = "Mark an onboarding step as completed with optional completion data"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []

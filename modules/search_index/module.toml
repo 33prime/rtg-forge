@@ -1,0 +1,82 @@
+[module]
+name = "search_index"
+version = "0.1.0"
+description = "Full-text search across entities using Postgres tsvector with indexing pipeline, weighted ranking, and search API"
+status = "stub"
+category = "quality"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/search"
+auth_required = true
+
+[module.database]
+tables = ["search_documents"]
+requires_rls = true
+
+[ai]
+use_when = "Any application where users need to search across multiple entity types — contacts, deals, documents, projects. Uses Postgres tsvector (not Elasticsearch or Algolia) for full-text search with weighted ranking. Covers 90% of search needs without external service dependencies."
+input_summary = "Search query string with optional entity type filter, pagination, and highlighting. Indexing: entity type, entity ID, and searchable fields with weights."
+output_summary = "Ranked search results with entity type, entity ID, headline (highlighted matching text), relevance score, and metadata. Results respect RLS — users only see entities they have access to."
+complexity = "medium"
+estimated_setup_minutes = 15
+
+[[ai.decisions.required]]
+key = "indexed_entities"
+label = "What types of things are searchable"
+technical = "entity_types"
+examples = ["Just contacts and companies", "All major entities (contacts, deals, projects, documents)", "User-configurable per deployment", "Everything with a name or title field"]
+
+[[ai.decisions.required]]
+key = "field_weights"
+label = "Which fields matter more in search results"
+technical = "weight_config"
+examples = ["Name/title weighted highest, description medium, content lowest", "All fields equal weight", "Custom weights per entity type", "Boost recent results"]
+
+[[ai.decisions.required]]
+key = "index_trigger"
+label = "When the search index gets updated"
+technical = "indexing_mode"
+examples = ["Real-time via database trigger", "Async after each write (slight delay)", "Periodic batch reindex", "Real-time for creates, batch for updates"]
+
+[[ai.decisions.required]]
+key = "search_features"
+label = "How sophisticated the search needs to be"
+technical = "search_capabilities"
+examples = ["Simple keyword matching", "Fuzzy matching (typo-tolerant)", "Phrase matching and boolean operators", "Fuzzy + phrase + filters"]
+
+[[ai.companions.backend]]
+module = "activity_feed"
+relationship = "enriches_context"
+pitch = "Index activity events so users can search for 'when did we change the pricing'"
+
+[[ai.companions.frontend_views]]
+name = "Global Search"
+description = "Search bar with results grouped by entity type, highlighting, and keyboard navigation"
+priority = "required"
+
+[[ai.companions.frontend_components]]
+name = "SearchBar"
+description = "Input with debounced query, loading state, and result dropdown"
+
+[[ai.companions.frontend_components]]
+name = "SearchResult"
+description = "Single result row with entity type icon, highlighted title, and snippet"
+
+[[ai.companions.frontend_hooks]]
+name = "useSearch"
+description = "Debounced search query with results, loading state, and pagination"
+
+[[ai.companions.frontend_hooks]]
+name = "useSearchSuggestions"
+description = "Typeahead suggestions from recent and popular searches"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []

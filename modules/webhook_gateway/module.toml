@@ -1,0 +1,97 @@
+[module]
+name = "webhook_gateway"
+version = "0.1.0"
+description = "Inbound and outbound webhook management with signature verification, retry logic, payload logging, and dead letter tracking"
+status = "stub"
+category = "infrastructure"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings", "httpx"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/webhooks"
+auth_required = false
+
+[module.database]
+tables = ["webhook_endpoints", "webhook_deliveries", "webhook_events", "webhook_dead_letters"]
+requires_rls = true
+
+[ai]
+use_when = "Any application that receives webhooks from external services (Stripe, Recall.ai, GitHub) or sends webhooks to customer endpoints. Handles signature verification, payload logging, retry with exponential backoff, and dead letter queue for failed deliveries."
+input_summary = "Inbound: raw webhook payload with signature headers. Outbound: event type, payload, and target endpoint URL. Registration: endpoint URL with secret and event type subscriptions."
+output_summary = "Verified and logged webhook events with parsed payloads. Outbound delivery records with attempt history, status (pending→delivered/failed→dead_letter), and retry scheduling."
+complexity = "medium"
+estimated_setup_minutes = 15
+
+[[ai.decisions.required]]
+key = "signature_scheme"
+label = "How webhook authenticity is verified"
+technical = "verification_method"
+examples = ["HMAC-SHA256 (most common)", "Svix signatures", "API key in header", "No verification (development only)"]
+
+[[ai.decisions.required]]
+key = "retry_policy"
+label = "How failed outbound deliveries are retried"
+technical = "retry_config"
+examples = ["3 retries with exponential backoff", "5 retries over 24 hours", "No retries, fail immediately", "Retry until success (max 7 days)"]
+
+[[ai.decisions.required]]
+key = "event_types"
+label = "What events trigger outbound webhooks"
+technical = "event_catalog"
+examples = ["Define per module (invoice.paid, member.invited)", "Any database change via Supabase Realtime", "Custom events fired from service code"]
+
+[[ai.decisions.required]]
+key = "dead_letter_handling"
+label = "What happens when delivery permanently fails"
+technical = "dead_letter_policy"
+examples = ["Log and alert via Slack", "Queue for manual retry", "Disable endpoint after N failures"]
+
+[[ai.companions.backend]]
+module = "notification_dispatch"
+relationship = "consumes_output"
+pitch = "Alert admins when webhook deliveries fail or endpoints go down"
+
+[[ai.companions.backend]]
+module = "audit_trail"
+relationship = "consumes_output"
+pitch = "Log all inbound and outbound webhook events for debugging and compliance"
+
+[[ai.companions.frontend_views]]
+name = "Webhook Endpoints"
+description = "List of registered webhook endpoints with status, event subscriptions, and health indicators"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Delivery Log"
+description = "Searchable log of webhook deliveries with status, response codes, and retry history"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Dead Letter Queue"
+description = "Failed deliveries pending manual review with replay action"
+priority = "nice-to-have"
+
+[[ai.companions.frontend_components]]
+name = "EndpointHealthBadge"
+description = "Green/yellow/red indicator based on recent delivery success rate"
+
+[[ai.companions.frontend_components]]
+name = "DeliveryTimeline"
+description = "Attempt history for a single delivery showing each retry with response"
+
+[[ai.companions.frontend_hooks]]
+name = "useWebhookEndpoints"
+description = "List and manage webhook endpoint registrations"
+
+[[ai.companions.frontend_hooks]]
+name = "useWebhookDeliveries"
+description = "List deliveries with filtering by endpoint, status, and date range"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []

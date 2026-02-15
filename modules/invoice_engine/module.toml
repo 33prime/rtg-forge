@@ -1,0 +1,132 @@
+[module]
+name = "invoice_engine"
+version = "0.1.0"
+description = "Invoice generation, line item management, payment tracking, PDF rendering, reminders, and overdue handling"
+status = "stub"
+category = "commercial"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings", "httpx"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/invoices"
+auth_required = true
+
+[module.database]
+tables = ["invoices", "invoice_line_items", "invoice_payments", "invoice_reminders", "invoice_templates"]
+requires_rls = true
+
+[ai]
+use_when = "Any application that needs to generate, send, and track invoices. Supports custom line items, tax calculations, branded PDF generation, payment tracking (manual or Stripe), automated reminders, and overdue escalation. Use alongside proposal_builder for full quote-to-cash workflow."
+input_summary = "Invoice creation with client info, line items (description, quantity, unit price, tax), payment terms, and optional template. Payment recording with amount, method, and reference. Can be auto-generated from accepted proposals."
+output_summary = "Invoice records with lifecycle status (draft→sent→viewed→partial→paid→overdue→void), line item calculations (subtotal, tax, total), payment history, PDF download URL, and reminder schedule tracking."
+complexity = "high"
+estimated_setup_minutes = 20
+
+[[ai.decisions.required]]
+key = "tax_handling"
+label = "How taxes are calculated on invoices"
+technical = "tax_mode"
+examples = ["Manual tax amount per line item", "Fixed tax rate applied to subtotal", "Tax service integration (auto-calculate by region)", "No tax (B2B exempt)"]
+
+[[ai.decisions.required]]
+key = "numbering_scheme"
+label = "How invoice numbers are generated"
+technical = "invoice_numbering"
+examples = ["Sequential (INV-001, INV-002)", "Year-prefixed (2026-001)", "Custom prefix per org", "Random unique IDs"]
+
+[[ai.decisions.required]]
+key = "payment_terms"
+label = "When payment is expected"
+technical = "default_terms"
+examples = ["Due on receipt", "Net 30", "Net 60", "Custom per client"]
+
+[[ai.decisions.required]]
+key = "payment_collection"
+label = "How payments are collected"
+technical = "payment_method"
+examples = ["Manual recording (bank transfer, check)", "Stripe payment link on invoice", "Stripe auto-charge saved payment method", "Multiple methods available"]
+
+[[ai.decisions.required]]
+key = "reminder_cadence"
+label = "How overdue invoices are followed up"
+technical = "reminder_schedule"
+examples = ["No automated reminders", "Reminder at due date, then weekly", "3-day, 7-day, 14-day escalation", "Custom schedule per client"]
+
+[[ai.decisions.required]]
+key = "pdf_branding"
+label = "How invoice PDFs look"
+technical = "pdf_template"
+examples = ["Simple text-based layout", "Branded with logo, colors, footer", "Multiple templates per invoice type"]
+
+[[ai.companions.backend]]
+module = "proposal_builder"
+relationship = "consumes_output"
+pitch = "Auto-generate invoices from accepted proposals with line items and client info pre-filled"
+
+[[ai.companions.backend]]
+module = "notification_dispatch"
+relationship = "consumes_output"
+pitch = "Send invoice delivery emails, payment confirmations, and overdue reminders"
+
+[[ai.companions.backend]]
+module = "webhook_gateway"
+relationship = "consumes_output"
+pitch = "Receive Stripe payment webhooks and auto-reconcile with invoice records"
+
+[[ai.companions.frontend_views]]
+name = "Invoice List"
+description = "All invoices with status, client, amount, due date, and payment progress"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Invoice Builder"
+description = "Create/edit invoice with line items, tax, discounts, and live total calculation"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Invoice Preview"
+description = "Rendered invoice as it will appear in PDF with download and send actions"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Payment Tracking"
+description = "Payment history for an invoice with partial payment support and balance display"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Revenue Dashboard"
+description = "Outstanding, overdue, and collected totals with aging chart"
+priority = "nice-to-have"
+
+[[ai.companions.frontend_components]]
+name = "InvoiceStatusBadge"
+description = "Shows draft, sent, viewed, partial, paid, overdue, or void with color coding"
+
+[[ai.companions.frontend_components]]
+name = "LineItemEditor"
+description = "Editable row with description, quantity, unit price, tax toggle, and line total"
+
+[[ai.companions.frontend_components]]
+name = "PaymentRecorder"
+description = "Form to record manual payment with amount, method, date, and reference"
+
+[[ai.companions.frontend_hooks]]
+name = "useInvoices"
+description = "List invoices with filtering by status, client, date range, and amount"
+
+[[ai.companions.frontend_hooks]]
+name = "useInvoiceBuilder"
+description = "CRUD for invoice line items with auto-calculation of totals"
+
+[[ai.companions.frontend_hooks]]
+name = "useRecordPayment"
+description = "Record a payment against an invoice, updating balance and status"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []

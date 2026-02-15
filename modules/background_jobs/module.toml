@@ -1,0 +1,96 @@
+[module]
+name = "background_jobs"
+version = "0.1.0"
+description = "Job queue with status tracking, retry logic, progress reporting, timeout handling, and execution history"
+status = "stub"
+category = "infrastructure"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings", "httpx"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/jobs"
+auth_required = true
+
+[module.database]
+tables = ["jobs", "job_runs", "job_schedules"]
+requires_rls = true
+
+[ai]
+use_when = "Any application with operations that take more than a few seconds — data processing, report generation, bulk operations, AI pipeline runs, email campaigns. Provides a job queue with status tracking, retry on failure, progress percentage, and execution history."
+input_summary = "Job submission with type, payload, and optional priority/schedule. Job ID for status polling and cancellation."
+output_summary = "Job records with lifecycle status (queued→running→completed/failed/cancelled), progress percentage, result payload, execution duration, and retry attempt history."
+complexity = "medium"
+estimated_setup_minutes = 15
+
+[[ai.decisions.required]]
+key = "queue_backend"
+label = "How jobs are queued and executed"
+technical = "queue_provider"
+examples = ["Postgres-based (poll for jobs)", "QStash (HTTP-based queue)", "In-process with FastAPI BackgroundTasks", "Redis-based (if already using Redis)"]
+
+[[ai.decisions.required]]
+key = "retry_strategy"
+label = "How failed jobs are retried"
+technical = "retry_config"
+examples = ["3 retries with exponential backoff", "Retry until success (max 24 hours)", "No retries, fail permanently", "Custom per job type"]
+
+[[ai.decisions.required]]
+key = "concurrency_model"
+label = "How many jobs can run at the same time"
+technical = "concurrency_limits"
+examples = ["Unlimited parallel execution", "Max 5 concurrent per type", "Sequential (one at a time)", "Per-org concurrency limits"]
+
+[[ai.decisions.required]]
+key = "scheduling"
+label = "Can jobs be scheduled for later or recurring"
+technical = "schedule_support"
+examples = ["Immediate execution only", "Schedule for a future time", "Recurring cron-style schedules", "Both one-time and recurring"]
+
+[[ai.companions.backend]]
+module = "notification_dispatch"
+relationship = "consumes_output"
+pitch = "Notify users when long-running jobs complete or fail"
+
+[[ai.companions.backend]]
+module = "audit_trail"
+relationship = "consumes_output"
+pitch = "Log job submissions, completions, and failures for operational visibility"
+
+[[ai.companions.frontend_views]]
+name = "Job Dashboard"
+description = "List of jobs with status, progress, duration, and filtering by type and status"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Job Detail"
+description = "Single job view with progress bar, execution log, retry history, and result payload"
+priority = "nice-to-have"
+
+[[ai.companions.frontend_components]]
+name = "JobProgressBar"
+description = "Progress indicator with percentage, elapsed time, and estimated time remaining"
+
+[[ai.companions.frontend_components]]
+name = "JobStatusBadge"
+description = "Color-coded status showing queued, running, completed, failed, or cancelled"
+
+[[ai.companions.frontend_hooks]]
+name = "useJobs"
+description = "List jobs with filtering by type, status, and date range"
+
+[[ai.companions.frontend_hooks]]
+name = "useJobStatus"
+description = "Poll a single job's status and progress with real-time updates"
+
+[[ai.companions.frontend_hooks]]
+name = "useSubmitJob"
+description = "Submit a new job with type, payload, and optional priority"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []

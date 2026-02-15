@@ -1,0 +1,92 @@
+[module]
+name = "settings_vault"
+version = "0.1.0"
+description = "Centralized typed settings with system/org/user hierarchy, defaults, override resolution, and sensitive value encryption"
+status = "stub"
+category = "quality"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/settings"
+auth_required = true
+
+[module.database]
+tables = ["setting_definitions", "setting_values"]
+requires_rls = true
+
+[ai]
+use_when = "Any application with user-configurable settings that need a typed schema, default values, and a hierarchy (system defaults → org overrides → user overrides). Replaces ad-hoc JSON columns and scattered config with a centralized, queryable settings system."
+input_summary = "Setting definition with key, type, default value, scope (system/org/user), and validation rules. Setting value updates with scope context."
+output_summary = "Resolved setting values with override chain (which level set the value), typed validation, and bulk retrieval. Sensitive values (API keys, secrets) stored encrypted."
+complexity = "low"
+estimated_setup_minutes = 10
+
+[[ai.decisions.required]]
+key = "scope_hierarchy"
+label = "How settings override each other"
+technical = "override_chain"
+examples = ["System defaults only (no overrides)", "System → organization overrides", "System → organization → user overrides", "System → role → user overrides"]
+
+[[ai.decisions.required]]
+key = "setting_types"
+label = "What kinds of settings values are supported"
+technical = "value_types"
+examples = ["Strings and numbers only", "Strings, numbers, booleans, and enums", "Any JSON-serializable value", "Typed with validation rules per setting"]
+
+[[ai.decisions.required]]
+key = "sensitive_handling"
+label = "How secret values (API keys, tokens) are stored"
+technical = "encryption_mode"
+examples = ["No encryption (non-sensitive settings only)", "Encrypt values marked as sensitive", "All settings encrypted at rest", "Sensitive settings stored in separate vault"]
+
+[[ai.decisions.required]]
+key = "change_tracking"
+label = "Should setting changes be logged"
+technical = "change_log"
+examples = ["No tracking", "Log who changed what and when", "Log with before/after values", "Full audit trail integration"]
+
+[[ai.companions.backend]]
+module = "audit_trail"
+relationship = "consumes_output"
+pitch = "Track every settings change with who, when, and before/after values"
+
+[[ai.companions.backend]]
+module = "team_management"
+relationship = "enriches_context"
+pitch = "Scope settings to organizations and resolve user roles for permission checks"
+
+[[ai.companions.frontend_views]]
+name = "Settings Page"
+description = "Grouped settings with typed inputs, current values, and save/reset actions"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Admin Settings"
+description = "System-level and org-level settings management with override indicators"
+priority = "required"
+
+[[ai.companions.frontend_components]]
+name = "SettingField"
+description = "Type-aware input (text, number, toggle, enum dropdown) with default indicator and reset button"
+
+[[ai.companions.frontend_components]]
+name = "OverrideIndicator"
+description = "Shows which scope level set the current value (system default, org override, user override)"
+
+[[ai.companions.frontend_hooks]]
+name = "useSettings"
+description = "Get resolved settings for the current user with scope context"
+
+[[ai.companions.frontend_hooks]]
+name = "useUpdateSetting"
+description = "Update a setting value at a specific scope with optimistic UI"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []

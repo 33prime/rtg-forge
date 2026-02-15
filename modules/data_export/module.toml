@@ -1,0 +1,97 @@
+[module]
+name = "data_export"
+version = "0.1.0"
+description = "Export any entity as CSV, JSON, or PDF with filtering, background generation for large sets, and download link delivery"
+status = "stub"
+category = "operational"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/exports"
+auth_required = true
+
+[module.database]
+tables = ["export_jobs", "export_definitions"]
+requires_rls = true
+
+[ai]
+use_when = "Any application where users need to download their data — GDPR data portability, report generation, bulk data extraction, compliance exports. Handles format selection, column mapping, filtering, background generation for large datasets, and secure download links."
+input_summary = "Export request with entity type, format (CSV/JSON/PDF), filters, column selection, and optional scheduling. Export ID for status polling and download."
+output_summary = "Export job records with status (queued→generating→ready→expired), row count, file size, presigned download URL with expiration, and optional email delivery notification."
+complexity = "low"
+estimated_setup_minutes = 10
+
+[[ai.decisions.required]]
+key = "formats"
+label = "What file formats users can export to"
+technical = "supported_formats"
+examples = ["CSV only", "CSV and JSON", "CSV, JSON, and PDF reports", "Excel (XLSX) and CSV"]
+
+[[ai.decisions.required]]
+key = "size_threshold"
+label = "When exports run in the background vs. immediately"
+technical = "async_threshold"
+examples = ["Always immediate (small datasets)", "Background if over 1000 rows", "Always background with email notification", "User chooses sync or async"]
+
+[[ai.decisions.required]]
+key = "delivery_method"
+label = "How users get their exported files"
+technical = "delivery_mode"
+examples = ["Download link in browser", "Email with download link", "Both — immediate download + email backup", "Push to external storage (S3, Google Drive)"]
+
+[[ai.decisions.required]]
+key = "scheduling"
+label = "Can exports be scheduled to run automatically"
+technical = "schedule_support"
+examples = ["On-demand only", "Recurring daily/weekly exports", "Scheduled one-time exports", "No scheduling"]
+
+[[ai.companions.backend]]
+module = "background_jobs"
+relationship = "consumes_output"
+pitch = "Run large exports as background jobs with progress tracking and retry"
+
+[[ai.companions.backend]]
+module = "file_vault"
+relationship = "consumes_output"
+pitch = "Store generated export files with access control and expiration"
+
+[[ai.companions.backend]]
+module = "notification_dispatch"
+relationship = "consumes_output"
+pitch = "Email users when their background export is ready for download"
+
+[[ai.companions.frontend_views]]
+name = "Export Builder"
+description = "Select entity type, columns, filters, format, and trigger export"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Export History"
+description = "List of past exports with status, size, format, and download links"
+priority = "required"
+
+[[ai.companions.frontend_components]]
+name = "ExportButton"
+description = "One-click export trigger for a specific view with format selector dropdown"
+
+[[ai.companions.frontend_components]]
+name = "ExportStatusBadge"
+description = "Shows queued, generating, ready, or expired with progress percentage"
+
+[[ai.companions.frontend_hooks]]
+name = "useExports"
+description = "List export history with download links and status"
+
+[[ai.companions.frontend_hooks]]
+name = "useTriggerExport"
+description = "Submit an export request with entity type, format, and filters"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []

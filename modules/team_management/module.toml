@@ -1,0 +1,116 @@
+[module]
+name = "team_management"
+version = "0.1.0"
+description = "Organizations, team members, invitations, role-based access control, and Supabase Auth JWT middleware for FastAPI"
+status = "stub"
+category = "infrastructure"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings", "python-jose"]
+services = ["supabase"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/teams"
+auth_required = true
+
+[module.database]
+tables = ["profiles", "organizations", "org_members", "invitations"]
+requires_rls = true
+
+[ai]
+use_when = "Building any multi-user application that needs user profiles, organizations, team membership, invitations, and role-based access control. Also provides the FastAPI JWT middleware for validating Supabase Auth tokens and extracting the current user as a Depends()."
+input_summary = "Supabase Auth JWT token in Authorization header. Invitation payloads with email and role. Organization creation with name and settings."
+output_summary = "User profiles linked to auth.users, organization membership with roles (owner/admin/member), invitation lifecycle (pending→accepted/expired), FastAPI Depends() that resolves to current user with org context."
+complexity = "medium"
+estimated_setup_minutes = 15
+
+[[ai.decisions.required]]
+key = "org_model"
+label = "Can users belong to one team or multiple teams"
+technical = "multi_org"
+examples = ["One team per user", "Multiple teams with switching", "Single team mode (no org concept)"]
+
+[[ai.decisions.required]]
+key = "role_model"
+label = "How granular should permissions be"
+technical = "role_system"
+examples = ["Simple roles (owner, admin, member)", "Custom roles with specific permissions", "Role per resource (project-level roles)"]
+
+[[ai.decisions.required]]
+key = "invitation_flow"
+label = "How new team members get invited"
+technical = "invite_mechanism"
+examples = ["Email invitation with magic link", "Shareable invite link with expiration", "Admin adds directly, no invite needed"]
+
+[[ai.decisions.required]]
+key = "profile_fields"
+label = "What information to capture about each user"
+technical = "profile_schema"
+examples = ["Name and avatar only", "Name, title, department, phone", "Custom fields defined per organization"]
+
+[[ai.decisions.required]]
+key = "auth_providers"
+label = "How users sign in"
+technical = "supabase_auth_providers"
+examples = ["Email and password", "Google OAuth", "Multiple providers (Google + email)", "SSO via SAML"]
+
+[[ai.companions.backend]]
+module = "audit_trail"
+relationship = "consumes_output"
+pitch = "Track every team action — who invited whom, role changes, org settings updates"
+
+[[ai.companions.backend]]
+module = "notification_dispatch"
+relationship = "consumes_output"
+pitch = "Send invitation emails, welcome messages, and role change notifications"
+
+[[ai.companions.frontend_views]]
+name = "Team Members"
+description = "List of team members with roles, status, and management actions (remove, change role)"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Invite Members"
+description = "Invitation form with email input, role selection, and pending invite list"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Organization Settings"
+description = "Org name, logo, billing info, and team-wide configuration"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "User Profile"
+description = "Current user's profile editing — name, avatar, notification preferences"
+priority = "required"
+
+[[ai.companions.frontend_components]]
+name = "RoleBadge"
+description = "Color-coded role indicator (owner, admin, member) with optional permission tooltip"
+
+[[ai.companions.frontend_components]]
+name = "InviteStatusBadge"
+description = "Shows pending, accepted, or expired state for invitations"
+
+[[ai.companions.frontend_components]]
+name = "OrgSwitcher"
+description = "Dropdown to switch between organizations (only if multi-org enabled)"
+
+[[ai.companions.frontend_hooks]]
+name = "useCurrentUser"
+description = "Current authenticated user with profile, org context, and role"
+
+[[ai.companions.frontend_hooks]]
+name = "useTeamMembers"
+description = "List org members with roles, filtering, and management mutations"
+
+[[ai.companions.frontend_hooks]]
+name = "useInvitations"
+description = "List, create, and revoke invitations for the current org"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []

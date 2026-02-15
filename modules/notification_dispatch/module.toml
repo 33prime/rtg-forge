@@ -1,0 +1,103 @@
+[module]
+name = "notification_dispatch"
+version = "0.1.0"
+description = "Multi-channel notification system with templates, user preferences, digest batching, and delivery tracking"
+status = "stub"
+category = "infrastructure"
+author = "RTG"
+
+[module.dependencies]
+python = ["fastapi", "pydantic", "pydantic-settings", "httpx"]
+services = ["supabase", "resend"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/notifications"
+auth_required = true
+
+[module.database]
+tables = ["notifications", "notification_templates", "notification_preferences", "notification_deliveries"]
+requires_rls = true
+
+[ai]
+use_when = "Any application that needs to send notifications to users across multiple channels — email, in-app, Slack, or webhooks. Handles template rendering, per-user channel preferences, digest batching, and delivery tracking with retry."
+input_summary = "Notification event with type, recipient(s), template key, and template variables. Channel routing resolved from user preferences."
+output_summary = "Notification records with delivery status per channel (pending→sent→delivered/failed), in-app notifications with read/unread state, digest queue for batched delivery."
+complexity = "medium"
+estimated_setup_minutes = 15
+
+[[ai.decisions.required]]
+key = "channels"
+label = "How to reach users with notifications"
+technical = "enabled_channels"
+examples = ["Email only", "Email and in-app", "Email, in-app, and Slack", "Email, in-app, Slack, and webhook"]
+
+[[ai.decisions.required]]
+key = "email_provider"
+label = "What service sends the emails"
+technical = "email_service"
+examples = ["Resend", "SendGrid", "AWS SES", "Supabase Edge Functions"]
+
+[[ai.decisions.required]]
+key = "digest_strategy"
+label = "Should notifications be sent immediately or batched"
+technical = "digest_mode"
+examples = ["Always send immediately", "User chooses immediate or daily digest", "Batch non-urgent, send urgent immediately"]
+
+[[ai.decisions.required]]
+key = "template_format"
+label = "How notification content is structured"
+technical = "template_engine"
+examples = ["Plain text with variables", "Rich HTML email templates", "Markdown rendered to HTML"]
+
+[[ai.decisions.required]]
+key = "preference_control"
+label = "How much control users have over notifications"
+technical = "preference_granularity"
+examples = ["Global on/off per channel", "Per notification type per channel", "No user preferences, admin controls all"]
+
+[[ai.companions.backend]]
+module = "team_management"
+relationship = "enriches_context"
+pitch = "Route notifications based on team roles — admins get system alerts, members get activity updates"
+
+[[ai.companions.backend]]
+module = "background_jobs"
+relationship = "consumes_output"
+pitch = "Queue digest compilation and bulk email sends as background jobs"
+
+[[ai.companions.frontend_views]]
+name = "Notification Center"
+description = "In-app notification list with read/unread state, mark all read, and filtering by type"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Notification Preferences"
+description = "Per-channel, per-type preference toggles for the current user"
+priority = "required"
+
+[[ai.companions.frontend_views]]
+name = "Notification Templates"
+description = "Admin view for managing email and in-app notification templates"
+priority = "setup"
+
+[[ai.companions.frontend_components]]
+name = "NotificationBell"
+description = "Header icon with unread count badge and dropdown preview of recent notifications"
+
+[[ai.companions.frontend_components]]
+name = "NotificationItem"
+description = "Single notification row with icon, message, timestamp, and read/unread indicator"
+
+[[ai.companions.frontend_hooks]]
+name = "useNotifications"
+description = "List in-app notifications with real-time updates via Supabase Realtime, mark as read"
+
+[[ai.companions.frontend_hooks]]
+name = "useNotificationPreferences"
+description = "Get and update the current user's notification channel preferences"
+
+[health]
+last_validated = ""
+test_coverage = 0
+known_issues = []
