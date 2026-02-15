@@ -1,0 +1,70 @@
+{
+  "_comment": "Call Intelligence module configuration. Edit this file to customize analysis behavior.",
+  "_docs": "See MODULE.md for full customization guide.",
+
+  "analysis": {
+    "model": "claude-sonnet-4-20250514",
+    "max_tokens": 16384,
+    "system_prompt": "You are a call analysis engine. Analyze the transcript and extract structured intelligence across the requested dimensions. Output valid JSON only. No text outside the JSON.",
+
+    "active_packs": ["core", "sales", "coaching", "research"],
+
+    "custom_dimensions": [
+      {
+        "_example": true,
+        "_comment": "Uncomment and modify to add your own dimension:",
+        "key": "compliance_flags",
+        "instruction": "Flag any compliance, regulatory, or legal concerns mentioned in the call. Include the quote and severity (low/medium/high).",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "concern": { "type": "string" },
+              "severity": { "enum": ["low", "medium", "high"] },
+              "quote": { "type": "string" }
+            }
+          }
+        },
+        "output": {
+          "target": "call_analyses",
+          "column": null,
+          "spread": false
+        }
+      }
+    ]
+  },
+
+  "recording": {
+    "provider": "recall",
+    "bot_name": "Meeting Notetaker",
+    "region": "us-west-2",
+    "platforms": ["google_meet", "zoom", "teams"]
+  },
+
+  "transcription": {
+    "provider": "deepgram",
+    "model": "nova-2",
+    "features": ["diarize", "punctuate", "utterances", "smart_format"]
+  },
+
+  "notifications": {
+    "slack_template": "Call analysis complete for {contact_name} — Engagement: {engagement_score}/10",
+    "webhook_url": null
+  },
+
+  "context_providers": [
+    {
+      "_comment": "Add your own context providers here. Each one loads data and renders a markdown block that gets injected into the analysis prompt.",
+      "_example": {
+        "key": "contact_profile",
+        "label": "## Contact Profile",
+        "source": "supabase",
+        "table": "contacts",
+        "join_on": "contact_id",
+        "fields": ["name", "company", "role", "industry"],
+        "template": "- Name: {name}\n- Company: {company}\n- Role: {role}\n- Industry: {industry}"
+      }
+    }
+  ]
+}
