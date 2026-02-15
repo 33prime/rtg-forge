@@ -8,6 +8,9 @@ on:
       - 'modules/**'
       - 'profiles/**'
       - 'decisions/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'intelligence/**'
   workflow_dispatch:
 
 jobs:
