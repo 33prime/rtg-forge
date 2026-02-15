@@ -1,0 +1,42 @@
+[module]
+name = "call_intelligence"
+version = "0.1.0"
+description = "Meeting recording, transcription, and AI-powered multi-dimensional call analysis with configurable dimension packs"
+status = "beta"
+category = "intelligence"
+author = "RTG"
+
+[module.dependencies]
+python = ["httpx", "anthropic", "pydantic", "pydantic-settings"]
+services = ["supabase", "anthropic", "recall.ai", "deepgram"]
+modules = []
+
+[module.api]
+prefix = "/api/v1/call-intelligence"
+auth_required = false
+
+[module.database]
+tables = [
+    "call_recordings",
+    "call_transcripts",
+    "call_analyses",
+    "call_feature_insights",
+    "call_signals",
+    "call_coaching_moments",
+    "call_content_nuggets",
+    "call_competitive_mentions",
+]
+requires_rls = true
+
+[ai]
+use_when = "Need to record meetings (Google Meet, Zoom, Teams), transcribe with speaker diarization, and analyze across configurable dimensions — engagement scoring, feature reactions, coaching feedback, ICP signals, competitive intel, and content nuggets. Analysis dimensions are config-driven: enable/disable packs or add custom dimensions without code changes."
+input_summary = "meeting_url (string) to schedule a recording bot, or call_recording_id (UUID) to trigger analysis. Optional context_blocks (dict) to inject CRM/ICP/product context into the analysis prompt."
+output_summary = "call_recordings row with status machine (pending→bot_scheduled→recording→transcribing→analyzing→complete), call_transcripts with speaker-diarized segments, call_analyses with engagement score, talk ratio, timeline, executive summary, and custom dimensions. Child tables: feature insights with reactions/aha moments, signals with intensity scores, coaching moments with suggestions, content nuggets, and competitive mentions."
+complexity = "high"
+estimated_setup_minutes = 20
+related_modules = ["stakeholder_enrichment", "icp_signal_extraction"]
+
+[health]
+last_validated = "2026-02-15"
+test_coverage = 0
+known_issues = ["Recall.ai webhook signature verification should be tested end-to-end", "Deepgram pre-signed URL expiration timing not validated"]
